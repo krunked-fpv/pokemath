@@ -11,12 +11,14 @@ import {
   generateProblem,
   validateAnswer,
   generateMoveSetProblems,
+  formatSkillTag,
 } from '../js/core/mathEngine.js';
 import { buildHintBundle } from '../js/core/hintEngine.js';
 import { recordAttempt, getRecommendedProblemConfig } from '../js/core/adaptive.js';
 import {
   VAULT_COOKIE_NAME,
   STORAGE_KEY,
+  BUDDY_NICKNAME_MAX_LEN,
   initState,
   getState,
   getActiveProfile,
@@ -24,11 +26,13 @@ import {
   createProfile,
   deleteProfile,
   updateProfile,
+  setBuddyNickname,
   subscribe,
   exportSaveJSON,
   exportSaveCode,
   importSaveJSON,
   healFromCookieVault,
+  getLastHealSource,
   syncCookieVault,
 } from '../js/core/state.js';
 import * as audio from '../js/core/audio.js';
@@ -1357,6 +1361,1468 @@ describe('8. Visual Effects & Offline SVG Fallback', () => {
       } else {
         globalThis.document = prevDocument;
       }
+    }
+  });
+});
+
+/* ============================================================================
+ * 9. Sprint 2 — Speech & Grammar Audit (`mathEngine.js` & `hintEngine.js`)
+ * ============================================================================ */
+
+const ALL_OPERATIONS = [
+  'add',
+  'sub',
+  'mul',
+  'div',
+  'placeValue',
+  'comparison',
+  'fraction',
+  'word',
+  'orderOfOps',
+  'balanced',
+];
+
+const ALL_FORMATS = [
+  'numeric',
+  'missing',
+  'comparison',
+  'fraction',
+  'word',
+  'array',
+  'placeValue',
+  'numberLine',
+];
+
+const FORBIDDEN_SPEECH_PATTERNS = [
+  { label: 'fourthsths', regex: /fourthsths/i },
+  { label: 'overths', regex: /overths/i },
+  { label: '1 tens', regex: /\b1 tens\b/i },
+  { label: '1 ones', regex: /\b1 ones\b/i },
+  { label: '1 25-Coin tokens', regex: /\b1 25-Coin tokens\b/i },
+  { label: '1 10-Coin tokens', regex: /\b1 10-Coin tokens\b/i },
+  { label: '1 5-Coin tokens', regex: /\b1 5-Coin tokens\b/i },
+  { label: '1 crates', regex: /\b1 crates\b/i },
+  { label: 'requested value value', regex: /requested value value/i },
+  { label: 'value = ?', regex: /\bvalue\s*=\s*\?/i },
+  { label: 'raw multiplication sign ×', regex: /×/ },
+  { label: 'raw division sign ÷', regex: /÷/ },
+];
+
+function assertCleanSpeechText(text, label) {
+  assert.equal(typeof text, 'string', `${label}: expected string`);
+  assert.ok(text.trim().length > 0, `${label}: expected non-empty speech text`);
+  for (const rule of FORBIDDEN_SPEECH_PATTERNS) {
+    assert.equal(
+      rule.regex.test(text),
+      false,
+      `${label}: forbidden pattern "${rule.label}" found in "${text}"`
+    );
+  }
+}
+
+function assertCleanHintCopy(bundle, label) {
+  assertCleanSpeechText(bundle.tier1.spokenText, `${label}:tier1.spokenText`);
+
+  const nonSpeechTexts = [
+    ['tier1.headline', bundle.tier1.headline],
+    ['tier1.nudgeText', bundle.tier1.nudgeText],
+    ...bundle.tier3.steps.flatMap((s, idx) => [
+      [`tier3.steps[${idx}].highlight`, s.highlight],
+      [`tier3.steps[${idx}].formula`, s.formula],
+    ]),
+  ];
+
+  for (const [field, value] of nonSpeechTexts) {
+    assert.equal(
+      /requested value value/i.test(value),
+      false,
+      `${label}:${field} contains "requested value value": "${value}"`
+    );
+    assert.equal(
+      /\bvalue\s*=\s*\?/i.test(value),
+      false,
+      `${label}:${field} contains "value = ?": "${value}"`
+    );
+  }
+}
+
+describe('9. Sprint 2 — Speech & Grammar Audit', () => {
+  beforeEach(() => {
+    resetHistory();
+  });
+
+  it('audits 2,000+ generated problems across all 4 tiers, operations & formats for clean spokenPrompt and hint speech', () => {
+    const seenSkillTags = new Set();
+    let totalAudited = 0;
+    let sawPlaceValueAskValue = false;
+    let sawEquivFraction = false;
+    let sawParenthesizedSpeech = false;
+
+    const auditProblem = (problem, label) => {
+      assertProblemAndHintValid(problem, label);
+      assertCleanSpeechText(problem.spokenPrompt, `${label}:spokenPrompt`);
+
+      const bundle = buildHintBundle(problem);
+      assertCleanHintCopy(bundle, label);
+
+      seenSkillTags.add(problem.skillTag);
+      totalAudited += 1;
+
+      if (problem.meta?.placeDigits?.askPlace === 'value') {
+        sawPlaceValueAskValue = true;
+      }
+      if (problem.operation === 'fraction' && problem.format === 'missing') {
+        sawEquivFraction = true;
+      }
+      if (
+        (problem.operation === 'orderOfOps' || problem.operation === 'comparison') &&
+        ((problem.leftExpr && problem.leftExpr.includes('(')) ||
+          (problem.rightExpr && problem.rightExpr.includes('(')))
+      ) {
+        sawParenthesizedSpeech = true;
+        assert.ok(
+          problem.spokenPrompt.includes('the group '),
+          `${label}: parenthesized expression should use natural group phrasing in "${problem.spokenPrompt}"`
+        );
+        assert.equal(
+          /[()]/.test(problem.spokenPrompt),
+          false,
+          `${label}: raw parentheses leaked into spokenPrompt "${problem.spokenPrompt}"`
+        );
+      }
+    };
+
+    // 1) 500 general problems per tier (2,000 base)
+    for (const tier of TIERS) {
+      for (let i = 0; i < 500; i += 1) {
+        const p = generateProblem({ tier });
+        auditProblem(p, `speech-tier=${tier}#${i}`);
+      }
+    }
+
+    // 2) Targeted sweep across every operation x every tier (400 problems)
+    for (const tier of TIERS) {
+      for (const operation of ALL_OPERATIONS) {
+        for (let i = 0; i < 10; i += 1) {
+          const p = generateProblem({ tier, operation });
+          auditProblem(p, `speech-op=${tier}:${operation}#${i}`);
+        }
+      }
+    }
+
+    // 3) Targeted sweep across every format x every tier (320 problems)
+    for (const tier of TIERS) {
+      for (const format of ALL_FORMATS) {
+        for (let i = 0; i < 10; i += 1) {
+          const p = generateProblem({ tier, format });
+          auditProblem(p, `speech-fmt=${tier}:${format}#${i}`);
+        }
+      }
+    }
+
+    // 4) Explicitly exercise singular place-value ('1 ten and 1 one') and askPlace === 'value'
+    const narrowPvFilter = { enabled: true, operations: ['placeValue'], maxNumber: 11 };
+    for (let i = 0; i < 30; i += 1) {
+      const p = generateProblem({ tier: 'starter', operation: 'placeValue', customFilter: narrowPvFilter });
+      auditProblem(p, `speech-pv11#${i}`);
+    }
+
+    const explicitValueHint = buildHintBundle({
+      id: 'pv-val-explicit',
+      key: 'pv-val3:345',
+      tier: 'explorer',
+      skillTag: 'place_value_1000',
+      operation: 'placeValue',
+      format: 'placeValue',
+      promptText: 'What is the value of the 4 in 345?',
+      spokenPrompt: 'What is the value of the 4 in 345?',
+      expression: 'Value of 4 (tens place) in 345 = ?',
+      answer: 40,
+      choices: [4, 40, 400, 50],
+      manipulativeType: 'base10',
+      operands: [345, 4],
+      meta: { placeDigits: { number: 345, hundreds: 3, tens: 4, ones: 5, askPlace: 'value' } },
+    });
+    assertCleanHintCopy(explicitValueHint, 'explicit-pv-value');
+    assert.equal(explicitValueHint.tier3.steps[explicitValueHint.tier3.steps.length - 1].formula, '4 × 10 = ?');
+
+    assert.ok(totalAudited >= 2750, `Expected >= 2,750 audited problems, got ${totalAudited}`);
+    assert.equal(sawPlaceValueAskValue, true, 'Expected sweep to cover placeValue askPlace === "value"');
+    assert.equal(sawEquivFraction, true, 'Expected sweep to cover equivalent fraction prompts');
+    assert.equal(sawParenthesizedSpeech, true, 'Expected sweep to cover parenthesized expressions');
+
+    // Every emitted skillTag formats into a warm, non-underscore label
+    assert.ok(seenSkillTags.size >= 15);
+    for (const tag of seenSkillTags) {
+      const label = formatSkillTag(tag);
+      assert.equal(typeof label, 'string');
+      assert.ok(label.trim().length > 0);
+      assert.equal(label.includes('_'), false, `formatSkillTag("${tag}") left raw underscore in "${label}"`);
+    }
+  });
+
+  it('formats known and unknown skill tags via mathEngine.formatSkillTag()', () => {
+    assert.equal(formatSkillTag('add_within_20'), 'Addition to 20');
+    assert.equal(formatSkillTag('word_2step_champion'), 'Champion Story');
+    assert.equal(formatSkillTag('make_ten'), 'Make a Ten');
+    assert.equal(formatSkillTag('equivalent_fractions'), 'Matching Fractions');
+    assert.equal(formatSkillTag('skip_counting_5s'), 'Skip Counting by 5s');
+    assert.equal(formatSkillTag('skip_counting_25s'), 'Skip Counting by 25s');
+
+    // Unknown tag fallbacks are cleanly humanized instead of raw snake_case
+    assert.equal(formatSkillTag('mystery_boss_challenge'), 'Mystery Boss Challenge');
+    assert.equal(formatSkillTag('mul_within_50'), 'Multiplication to 50');
+    assert.equal(formatSkillTag(''), 'Math Adventure');
+    assert.equal(formatSkillTag('   '), 'Math Adventure');
+    assert.equal(formatSkillTag(null), 'Math Adventure');
+    assert.equal(formatSkillTag(undefined), 'Math Adventure');
+  });
+
+  it('exercises all 6 distinct Champion 2-step story templates in genWord', () => {
+    const expectedTemplates = [
+      'martChange',
+      'gymRelay',
+      'berryHarvest',
+      'stadiumTrek',
+      'crateShip',
+      'stardustForge',
+    ];
+    const seenTemplates = new Set();
+    const samplePrompts = new Map();
+
+    for (let i = 0; i < 240; i += 1) {
+      if (i % 25 === 0) resetHistory();
+      const p = generateProblem({ tier: 'champion', operation: 'word' });
+      assert.equal(p.tier, 'champion');
+      assert.equal(p.operation, 'word');
+      assert.equal(p.skillTag, 'word_2step_champion');
+      assertProblemAndHintValid(p, `champ-word#${i}`);
+      assertCleanSpeechText(p.spokenPrompt, `champ-word#${i}:spokenPrompt`);
+
+      const bundle = buildHintBundle(p);
+      assertCleanHintCopy(bundle, `champ-word#${i}`);
+
+      const tpl = p.meta?.championTemplate;
+      assert.ok(typeof tpl === 'string' && tpl.length > 0, `Missing meta.championTemplate on ${p.key}`);
+      assert.ok(p.key.startsWith(`word-champ:${tpl}:`), `Unexpected champion key "${p.key}"`);
+      assert.ok(p.meta?.orderSteps?.step1Expr, `Missing orderSteps.step1Expr on ${tpl}`);
+      assert.ok(Number.isFinite(p.meta?.orderSteps?.step1Val), `Missing orderSteps.step1Val on ${tpl}`);
+      assert.ok(p.meta?.orderSteps?.step2Op, `Missing orderSteps.step2Op on ${tpl}`);
+
+      seenTemplates.add(tpl);
+      if (!samplePrompts.has(tpl)) samplePrompts.set(tpl, p.promptText);
+    }
+
+    assert.equal(
+      seenTemplates.size,
+      6,
+      `Expected 6 distinct Champion word templates, saw [${[...seenTemplates].join(', ')}]`
+    );
+    for (const tpl of expectedTemplates) {
+      assert.ok(seenTemplates.has(tpl), `Champion word template "${tpl}" was never generated`);
+    }
+    // Verify distinct story copy across all 6 templates
+    assert.equal(new Set(samplePrompts.values()).size, 6);
+  });
+});
+
+/* ============================================================================
+ * 10. Sprint 2 — Anti-Spoiler Manipulative & Hint Audit (`hintEngine.js`)
+ * ============================================================================ */
+
+describe('10. Sprint 2 — Anti-Spoiler Manipulative & Hint Audit', () => {
+  beforeEach(() => {
+    resetHistory();
+  });
+
+  it('never leaks equivFraction unknown answer in tier2.config.shaded', () => {
+    for (let i = 0; i < 120; i += 1) {
+      if (i % 25 === 0) resetHistory();
+      const p = generateProblem({ tier: 'champion', operation: 'fraction', format: 'missing' });
+      assert.equal(p.operation, 'fraction');
+      assert.equal(p.format, 'missing');
+      const fd = p.meta.fractionData;
+      assert.ok(fd && fd.multiplier >= 2 && fd.leftNum >= 1);
+
+      const bundle = buildHintBundle(p);
+      assert.equal(bundle.tier2.type, 'berryArray');
+      assert.equal(bundle.tier2.config.mode, 'equivFraction');
+      assert.equal(
+        bundle.tier2.config.shaded,
+        fd.leftNum,
+        `equivFraction shaded (${bundle.tier2.config.shaded}) must equal known leftNum (${fd.leftNum})`
+      );
+      assert.notEqual(
+        bundle.tier2.config.shaded,
+        p.answer,
+        `equivFraction tier2.config.shaded leaked unknown answer ${p.answer} for ${p.expression}`
+      );
+    }
+
+    // Adversarial spec: even if fractionData.shaded was pre-populated with the answer (4),
+    // buildHintBundle must still shade only the known base numerator (2).
+    const adversarialBundle = buildHintBundle({
+      id: 'equiv-adversarial',
+      key: 'frac-eq:2/3=?/6',
+      tier: 'champion',
+      skillTag: 'equivalent_fractions',
+      operation: 'fraction',
+      format: 'missing',
+      promptText: 'Find the missing numerator for an equivalent fraction: 2/3 = ?/6',
+      spokenPrompt: 'Find the missing numerator: 2 thirds equals how many sixths?',
+      expression: '2/3 = ?/6',
+      answer: 4,
+      choices: [2, 3, 4, 5],
+      manipulativeType: 'berryArray',
+      operands: [2, 3, 6],
+      meta: {
+        rows: 2,
+        cols: 3,
+        fractionData: { leftNum: 2, leftDen: 3, rightNum: null, rightDen: 6, multiplier: 2, shaded: 4, total: 6 },
+      },
+    });
+    assert.equal(adversarialBundle.tier2.config.mode, 'equivFraction');
+    assert.equal(adversarialBundle.tier2.config.shaded, 2);
+    assert.notEqual(adversarialBundle.tier2.config.shaded, 4);
+  });
+
+  it('never leaks the solved answer in partWhole unknown slot across generated and crafted specs', () => {
+    let generatedPartWholeCount = 0;
+    for (const tier of TIERS) {
+      for (const operation of ['add', 'sub', 'div', 'word', 'orderOfOps']) {
+        for (let i = 0; i < 20; i += 1) {
+          const p = generateProblem({ tier, operation });
+          const bundle = buildHintBundle(p);
+          if (bundle.tier2.type === 'partWhole') {
+            const cfg = bundle.tier2.config;
+            assert.ok(
+              ['whole', 'left', 'right'].includes(cfg.unknown),
+              `Invalid partWhole unknown "${cfg.unknown}" for ${p.key}`
+            );
+            assert.equal(
+              cfg[cfg.unknown],
+              null,
+              `partWhole leaked value ${cfg[cfg.unknown]} in unknown slot "${cfg.unknown}" for ${p.key}`
+            );
+            generatedPartWholeCount += 1;
+          }
+        }
+      }
+    }
+    assert.ok(generatedPartWholeCount >= 40, `Expected >= 40 partWhole bundles audited, got ${generatedPartWholeCount}`);
+
+    // Explicit crafted specs where meta.whole or meta.parts contains the solved answer
+    const craftedCases = [
+      {
+        label: 'sub numeric (14 - 6 = 8)',
+        spec: {
+          operation: 'sub',
+          format: 'numeric',
+          operands: [14, 6],
+          answer: 8,
+          expression: '14 - 6 = ?',
+          manipulativeType: 'partWhole',
+          meta: { whole: 14, parts: [6, 8] },
+        },
+        expectedUnknown: 'right',
+        expectedKnown: { whole: 14, left: 6 },
+      },
+      {
+        label: 'missing addend (7 + ? = 15)',
+        spec: {
+          operation: 'add',
+          format: 'missing',
+          operands: [7, 15],
+          answer: 8,
+          expression: '7 + ? = 15',
+          manipulativeType: 'partWhole',
+          meta: { whole: 15, parts: [7, 8], missingSide: 'right' },
+        },
+        expectedUnknown: 'right',
+        expectedKnown: { whole: 15, left: 7 },
+      },
+      {
+        label: 'missing subtrahend (15 - ? = 9)',
+        spec: {
+          operation: 'sub',
+          format: 'missing',
+          operands: [15, 9],
+          answer: 6,
+          expression: '15 - ? = 9',
+          manipulativeType: 'partWhole',
+          meta: { whole: 15, parts: [6, 9], missingSide: 'subtrahend' },
+        },
+        expectedUnknown: 'left',
+        expectedKnown: { whole: 15, right: 9 },
+      },
+      {
+        label: 'take-away word problem (18 - 5 = 13)',
+        spec: {
+          operation: 'word',
+          format: 'word',
+          operands: [18, 5],
+          answer: 13,
+          expression: '18 - 5 = ?',
+          manipulativeType: 'partWhole',
+          meta: { whole: 18, parts: [5, 13], partUnknown: 'right' },
+        },
+        expectedUnknown: 'right',
+        expectedKnown: { whole: 18, left: 5 },
+      },
+      {
+        label: 'division sharing (48 ÷ 6 = 8)',
+        spec: {
+          operation: 'div',
+          format: 'numeric',
+          operands: [48, 6],
+          answer: 8,
+          expression: '48 ÷ 6 = ?',
+          manipulativeType: 'partWhole',
+          meta: { whole: 48, parts: [6, 8] },
+        },
+        expectedUnknown: 'right',
+        expectedKnown: { whole: 48, left: 6 },
+      },
+      {
+        label: 'addition whole unknown (9 + 6 = 15)',
+        spec: {
+          operation: 'add',
+          format: 'numeric',
+          operands: [9, 6],
+          answer: 15,
+          expression: '9 + 6 = ?',
+          manipulativeType: 'partWhole',
+          meta: { whole: 15, parts: [9, 6] },
+        },
+        expectedUnknown: 'whole',
+        expectedKnown: { left: 9, right: 6 },
+      },
+    ];
+
+    for (const tc of craftedCases) {
+      const bundle = buildHintBundle(tc.spec);
+      assert.equal(bundle.tier2.type, 'partWhole', tc.label);
+      const cfg = bundle.tier2.config;
+      assert.equal(cfg.unknown, tc.expectedUnknown, `${tc.label}: unexpected unknown slot`);
+      assert.equal(cfg[cfg.unknown], null, `${tc.label}: unknown slot must be null (no spoiler)`);
+      for (const [k, v] of Object.entries(tc.expectedKnown)) {
+        assert.equal(cfg[k], v, `${tc.label}: expected ${k} = ${v}`);
+      }
+    }
+  });
+
+  it('uses Bridge Back to 10 strategy in buildSubHints for crossing-10 subtraction', () => {
+    const sub14Minus6 = buildHintBundle({
+      id: 'sub-bridge-14-6',
+      key: 'sub:14-6',
+      tier: 'starter',
+      skillTag: 'sub_within_20',
+      operation: 'sub',
+      format: 'numeric',
+      promptText: 'What is 14 - 6?',
+      spokenPrompt: 'What is 14 minus 6?',
+      expression: '14 - 6 = ?',
+      answer: 8,
+      choices: [6, 7, 8, 9],
+      manipulativeType: 'numberLine',
+      operands: [14, 6],
+    });
+
+    assert.equal(sub14Minus6.tier1.headline, 'Bridge Back to 10!');
+    assert.ok(sub14Minus6.tier1.nudgeText.includes('4') && sub14Minus6.tier1.nudgeText.includes('2'));
+    assert.ok(sub14Minus6.tier1.spokenText.includes('10'));
+    assert.equal(sub14Minus6.tier3.steps.length, 2);
+    assert.equal(sub14Minus6.tier3.steps[0].formula, '14 - 4 = 10');
+    assert.equal(sub14Minus6.tier3.steps[1].formula, '10 - 2 = ?');
+    assert.equal(sub14Minus6.tier3.steps[1].formula.endsWith('?'), true);
+
+    // Higher ten boundary (23 - 7 -> 23 - 3 = 20, 20 - 4 = ?)
+    const sub23Minus7 = buildHintBundle({
+      operation: 'sub',
+      format: 'numeric',
+      operands: [23, 7],
+      answer: 16,
+      expression: '23 - 7 = ?',
+      manipulativeType: 'numberLine',
+    });
+    assert.equal(sub23Minus7.tier1.headline, 'Bridge Back to 20!');
+    assert.equal(sub23Minus7.tier3.steps[0].formula, '23 - 3 = 20');
+    assert.equal(sub23Minus7.tier3.steps[1].formula, '20 - 4 = ?');
+
+    // Non-crossing subtraction (17 - 4) must NOT falsely trigger Bridge Back to 10
+    const sub17Minus4 = buildHintBundle({
+      operation: 'sub',
+      format: 'numeric',
+      operands: [17, 4],
+      answer: 13,
+      expression: '17 - 4 = ?',
+      manipulativeType: 'numberLine',
+    });
+    assert.equal(sub17Minus4.tier1.headline, 'Hop Backwards!');
+    assert.equal(sub17Minus4.tier3.steps[sub17Minus4.tier3.steps.length - 1].formula, '17 - 4 = ?');
+  });
+
+  it('guarantees Tier 3 final step always ends short with "?" without revealing the final answer', () => {
+    let checked = 0;
+    for (const tier of TIERS) {
+      for (const operation of ALL_OPERATIONS) {
+        for (let i = 0; i < 12; i += 1) {
+          const p = generateProblem({ tier, operation });
+          const bundle = buildHintBundle(p);
+          const steps = bundle.tier3.steps;
+          assert.ok(Array.isArray(steps) && steps.length >= 1);
+          const lastFormula = steps[steps.length - 1].formula.trim();
+          const ansStr = String(p.answer);
+
+          assert.ok(lastFormula.includes('?'), `${p.key}: last step "${lastFormula}" missing '?'`);
+          assert.notEqual(lastFormula, ansStr, `${p.key}: last step leaked bare answer "${ansStr}"`);
+          assert.equal(
+            lastFormula.endsWith(`= ${ansStr}`),
+            false,
+            `${p.key}: last step ended with "= ${ansStr}"`
+          );
+
+          if (p.format !== 'comparison' && p.format !== 'fraction') {
+            assert.equal(
+              lastFormula.endsWith('?'),
+              true,
+              `${p.key} (${p.operation}/${p.format}): expected final step "${lastFormula}" to end with '?'`
+            );
+          } else if (p.format === 'fraction') {
+            assert.equal(
+              lastFormula.includes(ansStr),
+              false,
+              `${p.key}: visual fraction final step "${lastFormula}" leaked "${ansStr}"`
+            );
+          } else if (p.format === 'comparison') {
+            const solvedCmpRegex = new RegExp(`\\d+\\s*${escapeRegExp(ansStr)}\\s*\\d+`);
+            assert.equal(
+              solvedCmpRegex.test(lastFormula),
+              false,
+              `${p.key}: comparison final step "${lastFormula}" leaked "${ansStr}"`
+            );
+          }
+          checked += 1;
+        }
+      }
+    }
+    assert.equal(checked, 480);
+  });
+});
+
+/* ============================================================================
+ * 11. Sprint 2 — Cookie Vault Rolling Recovery & State Polish (`state.js`)
+ * ============================================================================ */
+
+describe('11. Sprint 2 — Cookie Vault Rolling Accuracy Recovery & State Polish', () => {
+  it('preserves skillMastery[tag].rolling booleans across localStorage wipe, healFromCookieVault(), and cold reload while staying < 3600 bytes', () => {
+    const storage = createMockStorage();
+    const cookieDoc = createMockCookieDoc();
+    const clock = new Date(2026, 8, 12, 12, 0, 0).getTime();
+
+    initState({ storage, cookieDoc, protocol: 'http:', now: () => clock });
+    createProfile({ name: 'Lucas', tier: 'ace', starterId: 'pikachu' });
+
+    const rollingPatterns = {
+      add_within_20: [true, false, true, true, false, false, true, true, true, false],
+      sub_within_20: [false, false, true, false],
+      mul_tables_12: [false, false, false],
+      div_exact_12: [true, true, true, true, true],
+      make_ten: [],
+      word_2step_champion: [true, false, true, false, true, true, false, true, false, false, true, true],
+    };
+
+    updateProfile((draft) => {
+      draft.skillMastery = {
+        add_within_20: { attempts: 14, correct: 10, rolling: rollingPatterns.add_within_20, consecutiveMisses: 1, level: 3 },
+        sub_within_20: { attempts: 4, correct: 1, rolling: rollingPatterns.sub_within_20, consecutiveMisses: 1, level: 1 },
+        mul_tables_12: { attempts: 3, correct: 0, rolling: rollingPatterns.mul_tables_12, consecutiveMisses: 3, level: 1 },
+        div_exact_12: { attempts: 5, correct: 5, rolling: rollingPatterns.div_exact_12, consecutiveMisses: 0, level: 3 },
+        make_ten: { attempts: 0, correct: 0, rolling: rollingPatterns.make_ten, consecutiveMisses: 0, level: 1 },
+        word_2step_champion: { attempts: 12, correct: 7, rolling: rollingPatterns.word_2step_champion, consecutiveMisses: 0, level: 2 },
+      };
+    });
+
+    const cookiePayload = cookieDoc.getValue(VAULT_COOKIE_NAME);
+    assert.ok(typeof cookiePayload === 'string' && cookiePayload.length > 0);
+    assert.ok(cookiePayload.length < 3600, `Cookie vault exceeded 3600 bytes: ${cookiePayload.length}`);
+
+    const assertRollingIntact = (profile, label) => {
+      assert.deepEqual(profile.skillMastery.add_within_20.rolling, rollingPatterns.add_within_20, `${label}: add_within_20`);
+      assert.deepEqual(profile.skillMastery.sub_within_20.rolling, rollingPatterns.sub_within_20, `${label}: sub_within_20`);
+      assert.deepEqual(profile.skillMastery.mul_tables_12.rolling, rollingPatterns.mul_tables_12, `${label}: mul_tables_12`);
+      assert.deepEqual(profile.skillMastery.div_exact_12.rolling, rollingPatterns.div_exact_12, `${label}: div_exact_12`);
+      assert.deepEqual(profile.skillMastery.make_ten.rolling, [], `${label}: make_ten`);
+      // >10 history packs the most recent 10 booleans accurately
+      assert.deepEqual(
+        profile.skillMastery.word_2step_champion.rolling,
+        rollingPatterns.word_2step_champion.slice(-10),
+        `${label}: word_2step_champion last 10`
+      );
+      assert.equal(profile.skillMastery.add_within_20.attempts, 14);
+      assert.equal(profile.skillMastery.add_within_20.correct, 10);
+      assert.equal(profile.skillMastery.mul_tables_12.consecutiveMisses, 3);
+    };
+
+    // 1) Direct localStorage wipe + healFromCookieVault()
+    storage.clear();
+    assert.equal(storage.getItem(STORAGE_KEY), null);
+    assert.equal(healFromCookieVault(), true);
+    assertRollingIntact(getActiveProfile(), 'healFromCookieVault');
+
+    // 2) Storage wipe + initState() cold recovery
+    const wipedStorage = createMockStorage();
+    initState({ storage: wipedStorage, cookieDoc, protocol: 'http:', now: () => clock + 5000 });
+    assert.equal(getLastHealSource(), 'cookie-vault');
+    assertRollingIntact(getActiveProfile(), 'initState-cookie-heal');
+
+    // 3) Subprocess cold reload with empty storage + seeded cookie vault
+    const stateModuleUrl = pathToFileURL(path.join(ROOT_DIR, 'js/core/state.js')).href;
+    const coldRollingScript = [
+      'const { initState, getActiveProfile, getLastHealSource, VAULT_COOKIE_NAME } = await import(process.env.POKEMATH_STATE_URL);',
+      'const store = new Map();',
+      'const storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(String(k), String(v)), removeItem: (k) => store.delete(k), clear: () => store.clear() };',
+      'const cookieDoc = { cookie: `${VAULT_COOKIE_NAME}=${process.env.POKEMATH_SEED_COOKIE}` };',
+      'initState({ storage, cookieDoc, protocol: "http:", now: () => Number(process.env.POKEMATH_TEST_NOW) });',
+      'process.stdout.write(JSON.stringify({ healSource: getLastHealSource(), active: getActiveProfile() }));',
+    ].join('\n');
+
+    const childOut = execFileSync(
+      process.execPath,
+      ['--input-type=module', '-e', coldRollingScript],
+      {
+        cwd: ROOT_DIR,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          POKEMATH_STATE_URL: stateModuleUrl,
+          POKEMATH_SEED_COOKIE: cookiePayload,
+          POKEMATH_TEST_NOW: String(clock + 10000),
+        },
+      }
+    );
+    const parsedChild = JSON.parse(childOut);
+    assert.equal(parsedChild.healSource, 'cookie-vault');
+    assertRollingIntact(parsedChild.active, 'subprocess-cold-reload');
+
+    // 4) Stress ceiling check: heavy roster + 15 packed rolling mastery tags still < 3600 bytes
+    updateProfile((draft) => {
+      for (let i = 0; i < 80; i += 1) {
+        const sp = POKEMON_ROSTER[i];
+        draft.caught[sp.id] = { count: 2, shiny: i % 8 === 0, firstCaughtAt: clock + i, nickname: `Ace${i}` };
+      }
+      for (let t = 0; t < 15; t += 1) {
+        draft.skillMastery[`tag_stress_${t}`] = {
+          attempts: 20 + t,
+          correct: 15 + (t % 5),
+          rolling: [true, false, true, true, false, true, false, true, true, true],
+          consecutiveMisses: t % 3,
+          level: 4,
+        };
+      }
+    });
+    const heavyCookie = cookieDoc.getValue(VAULT_COOKIE_NAME);
+    assert.ok(heavyCookie && heavyCookie.length < 3600, `Heavy rolling cookie vault was ${heavyCookie?.length} bytes`);
+  });
+
+  it('validates setBuddyNickname(speciesId, name): max 16 chars, collapses whitespace, clearable to null', () => {
+    const storage = createMockStorage();
+    const cookieDoc = createMockCookieDoc();
+    const clock = new Date(2026, 8, 15, 12, 0, 0).getTime();
+
+    assert.equal(BUDDY_NICKNAME_MAX_LEN, 16);
+
+    initState({ storage, cookieDoc, protocol: 'http:', now: () => clock });
+    createProfile({ name: 'May', tier: 'starter', starterId: 'pikachu' });
+
+    // Collapses surrounding & internal whitespace
+    const res1 = setBuddyNickname('pikachu', '   Sparky   Bolt  \t ');
+    assert.ok(res1 !== null);
+    assert.equal(res1.nickname, 'Sparky Bolt');
+    assert.equal(getActiveProfile().caught.pikachu.nickname, 'Sparky Bolt');
+
+    // Survives storage wipe + cookie vault heal
+    storage.clear();
+    assert.equal(healFromCookieVault(), true);
+    assert.equal(getActiveProfile().caught.pikachu.nickname, 'Sparky Bolt');
+
+    // Enforces max 16 chars
+    const resLong = setBuddyNickname('pikachu', 'SuperMegaElectricPikachu');
+    assert.equal(resLong.nickname, 'SuperMegaElectri');
+    assert.equal(resLong.nickname.length, 16);
+
+    // Trims trailing space if truncation boundary lands on whitespace
+    const resBoundary = setBuddyNickname('pikachu', '123456789012345 999');
+    assert.equal(resBoundary.nickname, '123456789012345');
+    assert.ok(resBoundary.nickname.length <= 16);
+
+    // Clearable to null via null, empty string, and whitespace-only string
+    assert.equal(setBuddyNickname('pikachu', null).nickname, null);
+    assert.equal(getActiveProfile().caught.pikachu.nickname, null);
+
+    setBuddyNickname('pikachu', 'Pika');
+    assert.equal(setBuddyNickname('pikachu', '').nickname, null);
+    assert.equal(getActiveProfile().caught.pikachu.nickname, null);
+
+    setBuddyNickname('pikachu', 'Pika');
+    assert.equal(setBuddyNickname('pikachu', '     ').nickname, null);
+    assert.equal(getActiveProfile().caught.pikachu.nickname, null);
+
+    // Rejects uncaught species, empty speciesId, and forbidden keys safely
+    assert.equal(setBuddyNickname('mewtwo', 'Psychic'), null);
+    assert.equal(getActiveProfile().caught.mewtwo, undefined);
+    assert.equal(setBuddyNickname('', 'Invalid'), null);
+    assert.equal(setBuddyNickname('__proto__', 'Pollute'), null);
+  });
+
+  it('uses canonical quest metrics (solve_total, solve_streak, catch_pokemon) and normalizes legacy metrics', () => {
+    const storage = createMockStorage();
+    const cookieDoc = createMockCookieDoc();
+    const clock = new Date(2026, 8, 20, 12, 0, 0).getTime();
+
+    initState({ storage, cookieDoc, protocol: 'http:', now: () => clock });
+    const created = createProfile({ name: 'Brendan', tier: 'explorer', starterId: 'bulbasaur' });
+
+    const defaultMetrics = created.activeQuests.map((q) => q.metric);
+    assert.deepEqual(defaultMetrics, ['solve_total', 'solve_streak', 'catch_pokemon']);
+
+    // Verify canonical quest metrics align with items.js QUEST_TEMPLATES
+    const itemQuestMetrics = new Set(QUEST_TEMPLATES.map((q) => q.metric));
+    for (const m of defaultMetrics) {
+      assert.ok(itemQuestMetrics.has(m), `Default quest metric "${m}" missing from items.js QUEST_TEMPLATES`);
+    }
+
+    // 1) Legacy metrics normalized through importSaveJSON()
+    const legacySave = {
+      version: 1,
+      activeProfileId: 'trainer-legacy-1',
+      updatedAt: clock,
+      profiles: [
+        {
+          id: 'trainer-legacy-1',
+          name: 'LegacyRed',
+          tier: 'starter',
+          activeBuddyId: 'charmander',
+          activeQuests: [
+            { id: 'q-1', templateId: 'solve-5', title: 'Solve 5', metric: 'totalSolved', target: 5, progress: 3, rewardStardust: 15, claimed: false },
+            { id: 'q-2', templateId: 'streak-3', title: 'Streak 3', metric: 'sessionStreak', target: 3, progress: 2, rewardStardust: 20, claimed: false },
+            { id: 'q-3', templateId: 'catch-1', title: 'Catch 1', metric: 'catches', target: 1, progress: 1, rewardStardust: 25, claimed: true },
+          ],
+          createdAt: clock,
+          updatedAt: clock,
+        },
+      ],
+    };
+
+    const imported = importSaveJSON(JSON.stringify(legacySave));
+    assert.equal(imported.ok, true);
+    const afterImport = getActiveProfile();
+    assert.deepEqual(
+      afterImport.activeQuests.map((q) => q.metric),
+      ['solve_total', 'solve_streak', 'catch_pokemon']
+    );
+    assert.deepEqual(
+      afterImport.activeQuests.map((q) => [q.progress, q.claimed]),
+      [
+        [3, false],
+        [2, false],
+        [1, true],
+      ]
+    );
+
+    // 2) Legacy metrics in raw localStorage hydrated via initState()
+    const legacyStorage = createMockStorage();
+    const emptyCookie = createMockCookieDoc();
+    legacyStorage.setItem(STORAGE_KEY, JSON.stringify(legacySave));
+    initState({ storage: legacyStorage, cookieDoc: emptyCookie, protocol: 'http:', now: () => clock + 1000 });
+    assert.deepEqual(
+      getActiveProfile().activeQuests.map((q) => q.metric),
+      ['solve_total', 'solve_streak', 'catch_pokemon']
+    );
+
+    // 3) Legacy metrics in compact cookie vault normalized via healFromCookieVault()
+    const legacyCompactCookie = createMockCookieDoc();
+    const legacyCompactPayload = {
+      v: 1,
+      ap: 'trainer-legacy-cookie',
+      ts: clock + 2000,
+      p: [
+        {
+          i: 'trainer-legacy-cookie',
+          n: 'CookieLegacy',
+          b: 'squirtle',
+          aq: [
+            ['q-1', 'solve-5', 'Solve 5', 'totalSolved', 5, 4, 15, 0],
+            ['q-2', 'streak-3', 'Streak 3', 'sessionStreak', 3, 3, 20, 1],
+            ['q-3', 'catch-1', 'Catch 1', 'catches', 1, 0, 25, 0],
+          ],
+          ua: clock + 2000,
+        },
+      ],
+    };
+    legacyCompactCookie.cookie = `${VAULT_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(legacyCompactPayload))}; path=/`;
+    const blankStorage = createMockStorage();
+    initState({ storage: blankStorage, cookieDoc: legacyCompactCookie, protocol: 'http:', now: () => clock + 3000 });
+    assert.equal(getLastHealSource(), 'cookie-vault');
+    assert.deepEqual(
+      getActiveProfile().activeQuests.map((q) => q.metric),
+      ['solve_total', 'solve_streak', 'catch_pokemon']
+    );
+  });
+});
+
+/* ============================================================================
+ * 12. Sprint 2 — Full Offline SW Precache, Manifest & CI Audit
+ * ============================================================================ */
+
+function collectFilesRecursive(dirAbs, ext, out = []) {
+  for (const entry of fs.readdirSync(dirAbs, { withFileTypes: true })) {
+    const full = path.join(dirAbs, entry.name);
+    if (entry.isDirectory()) {
+      collectFilesRecursive(full, ext, out);
+    } else if (entry.isFile() && entry.name.endsWith(ext)) {
+      const relPosix = path.relative(ROOT_DIR, full).split(path.sep).join('/');
+      out.push(`./${relPosix}`);
+    }
+  }
+  return out;
+}
+
+describe('12. Sprint 2 — Full Offline SW Precache, Manifest & CI Audit', () => {
+  it('precaches EVERY .css and .js file on disk in sw.js CORE_SHELL_URLS with ./ prefix', () => {
+    const swJs = fs.readFileSync(path.join(ROOT_DIR, 'sw.js'), 'utf8');
+    const shellArrayMatch = swJs.match(/const\s+CORE_SHELL_URLS\s*=\s*\[([\s\S]*?)\]/);
+    assert.ok(shellArrayMatch, 'sw.js missing CORE_SHELL_URLS array');
+
+    const listedUrls = [...shellArrayMatch[1].matchAll(/['"]([^'"]+)['"]/g)].map((m) => m[1]);
+    assert.equal(
+      new Set(listedUrls).size,
+      listedUrls.length,
+      'sw.js CORE_SHELL_URLS contains duplicate entries'
+    );
+    const listedSet = new Set(listedUrls);
+
+    const diskCss = collectFilesRecursive(path.join(ROOT_DIR, 'css'), '.css');
+    const diskJs = collectFilesRecursive(path.join(ROOT_DIR, 'js'), '.js');
+
+    assert.ok(diskCss.length >= 4, `Expected >= 4 CSS files on disk, found ${diskCss.length}`);
+    assert.ok(diskJs.length >= 17, `Expected >= 17 JS files on disk, found ${diskJs.length}`);
+
+    for (const rel of [...diskCss, ...diskJs]) {
+      assert.ok(rel.startsWith('./'), `Expected ./ prefix for ${rel}`);
+      assert.ok(
+        listedSet.has(rel),
+        `Offline precache gap: "${rel}" exists on disk but is missing from sw.js CORE_SHELL_URLS`
+      );
+    }
+
+    // Also ensure no stale css/ or js/ URLs in CORE_SHELL_URLS
+    for (const url of listedUrls) {
+      if (url.startsWith('./css/') || url.startsWith('./js/')) {
+        const diskPath = path.join(ROOT_DIR, url.slice(2));
+        assert.equal(fs.existsSync(diskPath), true, `Stale CORE_SHELL_URLS entry missing on disk: ${url}`);
+      }
+    }
+  });
+
+  it('splits manifest.json icons into separate "any" and "maskable" entries for 192x192 and 512x512', () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'manifest.json'), 'utf8'));
+    assert.ok(Array.isArray(manifest.icons), 'manifest.json missing icons array');
+
+    for (const icon of manifest.icons) {
+      assert.equal(typeof icon.purpose, 'string', `Icon ${icon.src} (${icon.sizes}) missing purpose`);
+      assert.equal(
+        /any\s+maskable|maskable\s+any/i.test(icon.purpose),
+        false,
+        `manifest.json icon ${icon.src} (${icon.sizes}) must not combine "any maskable"`
+      );
+      assert.equal(
+        icon.purpose.trim().split(/\s+/).length,
+        1,
+        `manifest.json icon ${icon.src} (${icon.sizes}) purpose "${icon.purpose}" must be a single token`
+      );
+    }
+
+    const requiredPairs = [
+      ['192x192', 'any', './assets/icons/icon-192.png'],
+      ['192x192', 'maskable', './assets/icons/icon-192.png'],
+      ['512x512', 'any', './assets/icons/icon-512.png'],
+      ['512x512', 'maskable', './assets/icons/icon-512.png'],
+    ];
+
+    for (const [sizes, purpose, expectedSrc] of requiredPairs) {
+      const matches = manifest.icons.filter((i) => i.sizes === sizes && i.purpose === purpose);
+      assert.equal(
+        matches.length,
+        1,
+        `Expected exactly 1 manifest icon entry for sizes="${sizes}" purpose="${purpose}", got ${matches.length}`
+      );
+      assert.equal(matches[0].src, expectedSrc);
+      assert.equal(matches[0].type, 'image/png');
+    }
+  });
+
+  it('gates GitHub Pages CI deploy on node --test tests/engine.test.mjs and excludes non-site files', () => {
+    const workflowPath = path.join(ROOT_DIR, '.github', 'workflows', 'deploy-pages.yml');
+    assert.equal(fs.existsSync(workflowPath), true, 'Missing .github/workflows/deploy-pages.yml');
+    const yaml = fs.readFileSync(workflowPath, 'utf8');
+
+    assert.match(yaml, /node-version:\s*['"]?22['"]?/, 'deploy-pages.yml must configure Node 22');
+    const testCmdIdx = yaml.indexOf('node --test tests/engine.test.mjs');
+    const uploadIdx = yaml.indexOf('actions/upload-pages-artifact');
+    assert.ok(testCmdIdx !== -1, 'deploy-pages.yml must run node --test tests/engine.test.mjs');
+    assert.ok(uploadIdx !== -1, 'deploy-pages.yml missing upload-pages-artifact step');
+    assert.ok(testCmdIdx < uploadIdx, 'Test step must run BEFORE upload-pages-artifact');
+
+    // Verify clean _site staging and required exclusions
+    assert.match(yaml, /path:\s*_site\b/, 'upload-pages-artifact must upload staged _site directory');
+    for (const excluded of ['.agents/', 'tests/', 'ARCHITECTURE.md', 'SPEC.md', 'HANDOFF.md']) {
+      assert.ok(
+        yaml.includes(`--exclude='${excluded}'`) || yaml.includes(`--exclude="${excluded}"`) || yaml.includes(`--exclude=${excluded}`),
+        `deploy-pages.yml staging must exclude "${excluded}"`
+      );
+    }
+  });
+});
+
+/* ============================================================================
+ * 13. Sprint 2 — Zero Cross-Module CSS Collisions & Style Cleanup
+ * ============================================================================ */
+
+function parseCssBlock(cssText) {
+  const stripped = String(cssText || '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const pmClasses = new Set();
+  const keyframes = new Set();
+  const ruleSelectors = [];
+
+  const stack = [];
+  let buf = '';
+  for (let i = 0; i < stripped.length; i += 1) {
+    const ch = stripped[i];
+    if (ch === '{') {
+      const header = buf.trim();
+      buf = '';
+      if (/^@(?:media|supports|layer|container)\b/i.test(header)) {
+        stack.push('container');
+      } else if (/^@keyframes\b/i.test(header)) {
+        const kfMatch = header.match(/^@keyframes\s+([a-zA-Z_-][a-zA-Z0-9_-]*)/i);
+        if (kfMatch) keyframes.add(kfMatch[1]);
+        stack.push('keyframes');
+      } else {
+        const insideKeyframes = stack.includes('keyframes');
+        if (!insideKeyframes && header && !header.startsWith('@')) {
+          const parts = header
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+          for (const sel of parts) {
+            ruleSelectors.push(sel);
+            for (const cm of sel.matchAll(/\.([a-zA-Z_-][a-zA-Z0-9_-]*)/g)) {
+              if (cm[1].startsWith('pm-')) {
+                pmClasses.add(cm[1]);
+              }
+            }
+          }
+        }
+        stack.push('rule');
+      }
+    } else if (ch === '}') {
+      buf = '';
+      stack.pop();
+    } else {
+      buf += ch;
+    }
+  }
+
+  return { pmClasses, keyframes, ruleSelectors };
+}
+
+function createStyleAwareMockDocument() {
+  const makeNode = (tagName, ns = 'http://www.w3.org/1999/xhtml') => {
+    const base = createMockDomElement(tagName, ns);
+    base.id = '';
+    base.textContent = '';
+    base.removeChild = (child) => {
+      const idx = base.children.indexOf(child);
+      if (idx >= 0) base.children.splice(idx, 1);
+      child.parentNode = null;
+      return child;
+    };
+    base.remove = () => {
+      if (base.parentNode && typeof base.parentNode.removeChild === 'function') {
+        base.parentNode.removeChild(base);
+      }
+    };
+    base.querySelectorAll = () => [];
+    base.closest = () => null;
+    const origSetAttr = base.setAttribute;
+    base.setAttribute = (name, value) => {
+      if (String(name) === 'id') base.id = String(value);
+      origSetAttr(name, value);
+    };
+    return base;
+  };
+
+  const head = makeNode('head');
+  const body = makeNode('body');
+  const findById = (node, id) => {
+    if (node.id === id) return node;
+    for (const child of node.children) {
+      const found = findById(child, id);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  return {
+    head,
+    body,
+    documentElement: { dataset: {} },
+    createElement: (tag) => makeNode(tag, 'http://www.w3.org/1999/xhtml'),
+    createElementNS: (ns, tag) => makeNode(tag, ns),
+    getElementById: (id) => findById(head, id) || findById(body, id),
+  };
+}
+
+describe('13. Sprint 2 — Zero Cross-Module CSS Collisions & Style Cleanup', () => {
+  const GAME_MODULES = [
+    { file: 'battleMode.js', prefix: 'pm-battle' },
+    { file: 'catchMode.js', prefix: 'pm-catch' },
+    { file: 'berryLabMode.js', prefix: 'pm-lab' },
+    { file: 'evolutionForge.js', prefix: 'pm-forge' },
+    { file: 'campPokedex.js', prefix: 'pm-camp' },
+  ];
+
+  it('mounts and unmounts every js/games/*.js module cleanly, removing its injected <style> element in unmount()', async () => {
+    // Ensure our audited list matches every .js file in js/games/ on disk
+    const diskGameFiles = fs
+      .readdirSync(path.join(ROOT_DIR, 'js/games'))
+      .filter((f) => f.endsWith('.js'))
+      .sort();
+    assert.deepEqual(
+      diskGameFiles,
+      GAME_MODULES.map((m) => m.file).sort(),
+      'Expected GAME_MODULES audit list to cover every file in js/games/'
+    );
+
+    const prevDocument = globalThis.document;
+    const mockDoc = createStyleAwareMockDocument();
+    globalThis.document = mockDoc;
+
+    // Seed isolated state for game module mounts
+    const storage = createMockStorage();
+    const cookieDoc = createMockCookieDoc();
+    initState({ storage, cookieDoc, protocol: 'http:', now: () => 1775000000000 });
+    createProfile({ name: 'StyleTester', tier: 'starter', starterId: 'pikachu' });
+
+    const [stateMod, mathMod, hintMod, adaptiveMod, vfxMod, pokemonMod, routesMod, itemsMod] =
+      await Promise.all([
+        import('../js/core/state.js'),
+        import('../js/core/mathEngine.js'),
+        import('../js/core/hintEngine.js'),
+        import('../js/core/adaptive.js'),
+        import('../js/ui/vfx.js'),
+        import('../js/data/pokemon.js'),
+        import('../js/data/routes.js'),
+        import('../js/data/items.js'),
+      ]);
+
+    const sharedCtx = {
+      state: stateMod,
+      mathEngine: mathMod,
+      hintEngine: hintMod,
+      adaptive: adaptiveMod,
+      audio,
+      vfx: vfxMod,
+      pokemonData: pokemonMod,
+      routesData: routesMod,
+      itemsData: itemsMod,
+      rotomPane: { setProblem() {}, setMood() {}, updateMetrics() {}, openHintTier() {}, render() {} },
+      shell: { showToast() {}, render() {} },
+      speedBlitz: { isEnabled: () => false, isBonusActive: () => false, consumeBonus: () => false, resetForProblem() {} },
+      onNavigate() {},
+      modeParams: {},
+    };
+
+    const seenStyleIds = new Set();
+
+    try {
+      for (const spec of GAME_MODULES) {
+        const modUrl = pathToFileURL(path.join(ROOT_DIR, 'js/games', spec.file)).href;
+        const mod = await import(modUrl);
+        assert.equal(typeof mod.mount, 'function', `${spec.file} missing mount()`);
+        assert.equal(typeof mod.unmount, 'function', `${spec.file} missing unmount()`);
+
+        const container = mockDoc.createElement('div');
+        try {
+          assert.equal(mockDoc.head.children.length, 0, `${spec.file}: head should be clean before mount`);
+          mod.mount(container, sharedCtx);
+
+          const styleNodes = mockDoc.head.children.filter((n) => n.tagName === 'STYLE');
+          assert.equal(
+            styleNodes.length,
+            1,
+            `${spec.file}: expected exactly 1 injected <style> element on mount, got ${styleNodes.length}`
+          );
+          const styleEl = styleNodes[0];
+          assert.ok(styleEl.id && styleEl.id.length > 0, `${spec.file}: injected <style> missing id`);
+          assert.equal(
+            seenStyleIds.has(styleEl.id),
+            false,
+            `${spec.file}: duplicate <style> id "${styleEl.id}"`
+          );
+          seenStyleIds.add(styleEl.id);
+          assert.ok(
+            typeof styleEl.textContent === 'string' && styleEl.textContent.trim().length > 100,
+            `${spec.file}: injected <style> textContent unexpectedly empty`
+          );
+        } finally {
+          mod.unmount();
+        }
+
+        const remainingStyles = mockDoc.head.children.filter((n) => n.tagName === 'STYLE');
+        assert.equal(
+          remainingStyles.length,
+          0,
+          `${spec.file}: unmount() left ${remainingStyles.length} <style> element(s) in document.head`
+        );
+      }
+    } finally {
+      if (prevDocument === undefined) {
+        delete globalThis.document;
+      } else {
+        globalThis.document = prevDocument;
+      }
+    }
+  });
+
+  it('enforces exclusive mode CSS prefixes (.pm-battle-*, .pm-catch-*, .pm-lab-*, .pm-forge-*, .pm-camp-*) with zero cross-module collisions', () => {
+    const ownerByClass = new Map();
+    const ownerByKeyframe = new Map();
+
+    for (const spec of GAME_MODULES) {
+      const src = fs.readFileSync(path.join(ROOT_DIR, 'js/games', spec.file), 'utf8');
+      const cssMatch = src.match(/(?:style\.textContent\s*=\s*|const\s+[A-Z_]+_CSS\s*=\s*)`([\s\S]*?)`/);
+      assert.ok(cssMatch, `${spec.file}: failed to locate injected <style> template block`);
+
+      const { pmClasses, keyframes, ruleSelectors } = parseCssBlock(cssMatch[1]);
+      assert.ok(
+        pmClasses.size >= 20,
+        `${spec.file}: expected >= 20 .pm-* class selectors, found ${pmClasses.size}`
+      );
+
+      // 1) Every .pm-* class belongs exclusively to this mode's prefix & never overlaps another mode
+      for (const cls of pmClasses) {
+        const matchesOwnPrefix = cls === spec.prefix || cls.startsWith(`${spec.prefix}-`);
+        assert.equal(
+          matchesOwnPrefix,
+          true,
+          `${spec.file}: class ".${cls}" violates exclusive prefix ".${spec.prefix}*"`
+        );
+        assert.equal(
+          ownerByClass.has(cls),
+          false,
+          `CSS collision: ".${cls}" declared in both ${ownerByClass.get(cls)} and ${spec.file}`
+        );
+        ownerByClass.set(cls, spec.file);
+      }
+
+      // 2) Zero unscoped rule selectors: every selector must be scoped under this mode's .pm-<mode> prefix
+      const ownPrefixRegex = new RegExp(`\\.${escapeRegExp(spec.prefix)}(?:-[a-zA-Z0-9_-]+)?(?![a-zA-Z0-9_-])`);
+      for (const sel of ruleSelectors) {
+        assert.match(
+          sel,
+          ownPrefixRegex,
+          `${spec.file}: unscoped CSS selector "${sel}" must be scoped to .${spec.prefix}*`
+        );
+      }
+
+      // 3) Zero overlapping @keyframes across modules
+      for (const kf of keyframes) {
+        assert.equal(
+          ownerByKeyframe.has(kf),
+          false,
+          `@keyframes collision: "${kf}" declared in both ${ownerByKeyframe.get(kf)} and ${spec.file}`
+        );
+        ownerByKeyframe.set(kf, spec.file);
+      }
+    }
+  });
+});
+
+/* ============================================================================
+ * 14. Sprint 2 — Audio Polish & Visibility Lifecycle (`js/core/audio.js`)
+ * ============================================================================ */
+
+function createMockAudioEnv() {
+  const oscillators = [];
+  const gainNodes = [];
+  const intervals = new Map();
+  let nextIntervalId = 1;
+  let totalIntervalsCreated = 0;
+
+  const makeAudioParam = (initial = 0) => {
+    const events = [];
+    return {
+      value: initial,
+      events,
+      setValueAtTime(val, t) {
+        this.value = val;
+        events.push({ op: 'setValueAtTime', val, t });
+      },
+      linearRampToValueAtTime(val, t) {
+        this.value = val;
+        events.push({ op: 'linearRampToValueAtTime', val, t });
+      },
+      exponentialRampToValueAtTime(val, t) {
+        this.value = val;
+        events.push({ op: 'exponentialRampToValueAtTime', val, t });
+      },
+      setTargetAtTime(val, t, tc) {
+        this.value = val;
+        events.push({ op: 'setTargetAtTime', val, t, tc });
+      },
+      cancelScheduledValues(t) {
+        events.push({ op: 'cancelScheduledValues', t });
+      },
+    };
+  };
+
+  class MockAudioContext {
+    constructor() {
+      this.sampleRate = 44100;
+      this.currentTime = 1.0;
+      this.state = 'running';
+      this.destination = { kind: 'destination' };
+    }
+    resume() {
+      this.state = 'running';
+      return Promise.resolve();
+    }
+    createBuffer(_ch, len) {
+      const data = new Float32Array(len);
+      return { getChannelData: () => data };
+    }
+    createPeriodicWave(real, imag, opts) {
+      return { real, imag, opts };
+    }
+    createDynamicsCompressor() {
+      return {
+        threshold: makeAudioParam(-16),
+        knee: makeAudioParam(18),
+        ratio: makeAudioParam(4),
+        attack: makeAudioParam(0.004),
+        release: makeAudioParam(0.18),
+        connect() {},
+      };
+    }
+    createGain() {
+      const node = { gain: makeAudioParam(1), connect() {} };
+      gainNodes.push(node);
+      return node;
+    }
+    createBiquadFilter() {
+      return {
+        type: 'lowpass',
+        frequency: makeAudioParam(1000),
+        Q: makeAudioParam(1),
+        connect() {},
+      };
+    }
+    createOscillator() {
+      const osc = {
+        type: 'sine',
+        frequency: makeAudioParam(440),
+        detune: makeAudioParam(0),
+        periodicWave: null,
+        startedAt: null,
+        stoppedAt: null,
+        setPeriodicWave(w) {
+          this.periodicWave = w;
+        },
+        connect() {},
+        start(t) {
+          this.startedAt = t;
+        },
+        stop(t) {
+          this.stoppedAt = t;
+        },
+      };
+      oscillators.push(osc);
+      return osc;
+    }
+    createBufferSource() {
+      return { buffer: null, connect() {}, start() {}, stop() {} };
+    }
+  }
+
+  const visListeners = [];
+  const mockDoc = {
+    visibilityState: 'visible',
+    hidden: false,
+    addEventListener(type, fn) {
+      if (type === 'visibilitychange') visListeners.push(fn);
+    },
+    removeEventListener(type, fn) {
+      if (type !== 'visibilitychange') return;
+      const idx = visListeners.indexOf(fn);
+      if (idx >= 0) visListeners.splice(idx, 1);
+    },
+    emitVisibility(state) {
+      this.visibilityState = state;
+      this.hidden = state === 'hidden';
+      for (const fn of [...visListeners]) {
+        fn({ type: 'visibilitychange' });
+      }
+    },
+  };
+
+  const mockSetInterval = (fn, ms) => {
+    const id = nextIntervalId;
+    nextIntervalId += 1;
+    totalIntervalsCreated += 1;
+    intervals.set(id, { fn, ms });
+    return id;
+  };
+  const mockClearInterval = (id) => {
+    intervals.delete(id);
+  };
+
+  return {
+    MockAudioContext,
+    mockDoc,
+    oscillators,
+    gainNodes,
+    intervals,
+    visListeners,
+    mockSetInterval,
+    mockClearInterval,
+    getTotalIntervalsCreated: () => totalIntervalsCreated,
+  };
+}
+
+describe('14. Sprint 2 — Audio Polish & Visibility Lifecycle', () => {
+  it('exercises playClick("select"), playClick("love"), and ambient toggles safely in Node without AudioContext', () => {
+    assert.doesNotThrow(() => {
+      audio.setAudioSettings({ sfx: true, ambient: false, speech: false });
+      audio.playClick('select');
+      audio.playClick('love');
+      audio.setAudioSettings({ ambient: true });
+      assert.equal(audio.toggleAmbientMusic(true), true);
+      assert.equal(audio.toggleAmbientMusic(false), false);
+    });
+  });
+
+  it('verifies select/love synthesis, strictly idempotent ambient loop, and clean visibilitychange hide/show', async () => {
+    const env = createMockAudioEnv();
+    const prevAudioContext = globalThis.AudioContext;
+    const prevDocument = globalThis.document;
+    const prevSetInterval = globalThis.setInterval;
+    const prevClearInterval = globalThis.clearInterval;
+
+    globalThis.AudioContext = env.MockAudioContext;
+    globalThis.document = env.mockDoc;
+    globalThis.setInterval = env.mockSetInterval;
+    globalThis.clearInterval = env.mockClearInterval;
+
+    // Import an isolated instance of audio.js so Suite 7's Node-only import remains untouched
+    const audioUrl = `${pathToFileURL(path.join(ROOT_DIR, 'js/core/audio.js')).href}?sprint2-mock=1`;
+    const mockedAudio = await import(audioUrl);
+
+    try {
+      assert.equal(mockedAudio.unlockAudio(), true);
+      mockedAudio.setAudioSettings({ sfx: true, ambient: false, speech: false });
+
+      // 1) playClick('select') — crisp 2-note PokéNav chime (2 marimba notes = 6 oscillators)
+      const beforeSelect = env.oscillators.length;
+      mockedAudio.playClick('select');
+      const selectOscs = env.oscillators.slice(beforeSelect);
+      assert.equal(selectOscs.length, 6, `Expected 6 oscillators for "select", got ${selectOscs.length}`);
+      assert.ok(selectOscs.some((o) => Math.abs(o.frequency.value - 1174.66) < 0.1));
+      assert.ok(selectOscs.some((o) => Math.abs(o.frequency.value - 1567.98) < 0.1));
+
+      // 2) playClick('love') — warm 4-note heart-bell duet (2 marimba + 2 bell = 14 oscillators)
+      const beforeLove = env.oscillators.length;
+      mockedAudio.playClick('love');
+      const loveOscs = env.oscillators.slice(beforeLove);
+      assert.equal(loveOscs.length, 14, `Expected 14 oscillators for "love", got ${loveOscs.length}`);
+      assert.ok(loveOscs.some((o) => Math.abs(o.frequency.value - 523.25) < 0.1));
+      assert.ok(loveOscs.some((o) => Math.abs(o.frequency.value - 1046.5) < 0.1));
+
+      // Zero square/sawtooth buzzer waveforms
+      for (const osc of [...selectOscs, ...loveOscs]) {
+        assert.notEqual(osc.type, 'square', 'Audio must never use square wave buzzers');
+        assert.notEqual(osc.type, 'sawtooth', 'Audio must never use sawtooth wave buzzers');
+      }
+
+      // 3) Back-to-back setAudioSettings({ ambient: true }) + toggleAmbientMusic(true) is strictly idempotent
+      const oscCountBeforeAmbient = env.oscillators.length;
+      mockedAudio.setAudioSettings({ ambient: true });
+      const oscCountAfterFirstEnable = env.oscillators.length;
+      assert.equal(env.intervals.size, 1, 'Expected exactly 1 ambient interval after setAudioSettings({ ambient: true })');
+      assert.equal(env.visListeners.length, 1, 'Expected exactly 1 visibilitychange listener');
+      assert.ok(oscCountAfterFirstEnable > oscCountBeforeAmbient, 'Expected opening ambient note to play');
+
+      // Back-to-back calls must NOT create a second interval or play a duplicate opening note
+      assert.equal(mockedAudio.toggleAmbientMusic(true), true);
+      mockedAudio.setAudioSettings({ ambient: true });
+      assert.equal(env.intervals.size, 1, 'Back-to-back ambient enable must keep a single interval');
+      assert.equal(env.getTotalIntervalsCreated(), 1, 'Back-to-back ambient enable must not re-create interval');
+      assert.equal(env.visListeners.length, 1, 'Visibility listener must only be attached once');
+      assert.equal(
+        env.oscillators.length,
+        oscCountAfterFirstEnable,
+        'Back-to-back ambient enable must not play a double opening note'
+      );
+
+      // Ambient bus is the 3rd created GainNode (master, sfx, ambient)
+      const ambientBus = env.gainNodes[2];
+      assert.ok(ambientBus, 'Expected ambientBus gain node');
+
+      // 4) Hidden visibility pauses interval cleanly and fades ambientBus gain down
+      env.mockDoc.emitVisibility('hidden');
+      assert.equal(env.intervals.size, 0, 'Hiding document must clear ambient interval');
+      const lastHideTarget = [...ambientBus.gain.events]
+        .reverse()
+        .find((e) => e.op === 'setTargetAtTime');
+      assert.ok(lastHideTarget && lastHideTarget.val <= 0.001, 'Hiding document must fade ambient gain down');
+
+      // 5) Returning to visible resumes cleanly with a single interval and fades gain back up
+      const oscBeforeResume = env.oscillators.length;
+      env.mockDoc.emitVisibility('visible');
+      assert.equal(env.intervals.size, 1, 'Showing document must resume a single ambient interval');
+      assert.ok(env.oscillators.length > oscBeforeResume, 'Resuming visible should play ambient step');
+      const lastShowTarget = [...ambientBus.gain.events]
+        .reverse()
+        .find((e) => e.op === 'setTargetAtTime');
+      assert.ok(lastShowTarget && lastShowTarget.val >= 0.2, 'Showing document must fade ambient gain back up');
+
+      // 6) Disabling ambient while hidden prevents restart on becoming visible again
+      env.mockDoc.emitVisibility('hidden');
+      assert.equal(env.intervals.size, 0);
+      assert.equal(mockedAudio.toggleAmbientMusic(false), false);
+      env.mockDoc.emitVisibility('visible');
+      assert.equal(env.intervals.size, 0, 'Ambient disabled while hidden must not restart on visible');
+
+      // 7) Enabling ambient while already hidden defers interval until visible
+      env.mockDoc.emitVisibility('hidden');
+      mockedAudio.setAudioSettings({ ambient: true });
+      mockedAudio.toggleAmbientMusic(true);
+      assert.equal(env.intervals.size, 0, 'Ambient enabled while hidden must defer interval');
+      env.mockDoc.emitVisibility('visible');
+      assert.equal(env.intervals.size, 1, 'Deferred ambient must start cleanly with 1 interval once visible');
+
+      // Final clean shutdown
+      assert.equal(mockedAudio.toggleAmbientMusic(false), false);
+      assert.equal(env.intervals.size, 0);
+    } finally {
+      mockedAudio.toggleAmbientMusic(false);
+      if (prevAudioContext === undefined) delete globalThis.AudioContext;
+      else globalThis.AudioContext = prevAudioContext;
+      if (prevDocument === undefined) delete globalThis.document;
+      else globalThis.document = prevDocument;
+      globalThis.setInterval = prevSetInterval;
+      globalThis.clearInterval = prevClearInterval;
     }
   });
 });
