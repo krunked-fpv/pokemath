@@ -28,10 +28,35 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run engine tests
+        run: node --test tests/engine.test.mjs
+
+      - name: Stage clean site artifact
+        run: |
+          set -euo pipefail
+          rm -rf _site
+          mkdir _site
+          rsync -a \
+            --exclude='.agents/' \
+            --exclude='.git*' \
+            --exclude='.github/' \
+            --exclude='tests/' \
+            --exclude='ARCHITECTURE.md' \
+            --exclude='SPEC.md' \
+            --exclude='HANDOFF.md' \
+            --exclude='_site/' \
+            ./ _site/
+          touch _site/.nojekyll
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment
