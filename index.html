@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#E3350D">
+  <meta name="description" content="Zero-backend Pokémon math workbench with adaptive hints, interactive manipulatives, and offline PokéNav camp.">
+  <title>PokéMath — PokéNav Math Adventure</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="./css/tokens.css">
+  <link rel="stylesheet" href="./css/layout.css">
+  <link rel="stylesheet" href="./css/components.css">
+  <link rel="stylesheet" href="./css/animations.css">
+</head>
+<body>
+  <div id="app-shell">
+    <header id="trainer-ribbon" role="banner"></header>
+    <div id="workbench-body">
+      <aside id="left-rail" aria-label="Trainer Buddy and Route Map"></aside>
+      <main id="center-stage">
+        <nav id="mode-switcher" aria-label="PokéNav Adventure Modes"></nav>
+        <div id="speed-blitz-host"></div>
+        <section id="stage-content" aria-live="polite"></section>
+      </main>
+      <aside id="rotom-pane" aria-label="Rotom-Dex Field Guide"></aside>
+    </div>
+    <nav id="mobile-nav-bar" aria-label="Mobile PokéNav Navigation"></nav>
+    <div id="drawer-backdrop" aria-hidden="true"></div>
+    <div id="modal-root" role="presentation"></div>
+    <div id="toast-root" aria-live="polite"></div>
+  </div>
+  <noscript>
+    <p style="padding:16px;font-family:system-ui,sans-serif;">PokéMath requires JavaScript enabled to run the PokéNav Math Workbench.</p>
+  </noscript>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
