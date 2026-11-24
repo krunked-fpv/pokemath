@@ -418,15 +418,26 @@ export function playElementalAttackVFX(stageEl, elementType = 'normal', intensit
   }, timeout);
 }
 
+/** Styled floating-text variants guaranteed by SPEC §7 (unknown variants fall back to 'info'). */
+const FLOAT_TEXT_VARIANTS = new Set([
+  'damage', 'crit', 'xp', 'coins', 'coin', 'heal', 'nice', 'info', 'nudge', 'success', 'love'
+]);
+
 /**
  * Spawns floating damage, XP, coin, or celebration text inside `stageEl`.
  */
 export function spawnFloatingText(stageEl, text, variant = 'damage') {
   if (!stageEl || typeof document === 'undefined') return;
+  const safeVariant = FLOAT_TEXT_VARIANTS.has(variant) ? variant : 'info';
   const el = document.createElement('div');
-  el.className = `vfx-floating-text vfx-float-${variant} tabular-nums`;
+  el.className = `vfx-floating-text vfx-float-${safeVariant} tabular-nums`;
   el.textContent = String(text ?? '');
   el.setAttribute('aria-live', 'polite');
+  // Stack simultaneous popups so they don't overlap into unreadable text.
+  const active = stageEl.querySelectorAll?.(':scope > .vfx-floating-text').length || 0;
+  if (active > 0) {
+    el.style.setProperty('--float-stack', String(Math.min(active, 4)));
+  }
   stageEl.appendChild(el);
   const timeout = isReducedMotionPreferred() ? 600 : 960;
   setTimeout(() => {

@@ -44,6 +44,49 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
+function isFiniteNumber(value) {
+  return typeof value === 'number' ? Number.isFinite(value) : value !== null && value !== '' && value !== undefined && Number.isFinite(Number(value));
+}
+
+/** Combo charge: 4-answer streak fills the meter (matches adaptive critical threshold). */
+function deriveChargePct(streak) {
+  const s = Math.max(0, Number(streak) || 0);
+  return clamp(Math.round((s / 4) * 100), 0, 100);
+}
+
+/** Shiny Radar bonus %: mirrors adaptive.recordAttempt shinyRollBonus (0..15%). */
+function deriveShinyBonusPct(streak) {
+  const s = Math.max(0, Number(streak) || 0);
+  if (s < 4) return 0;
+  return Math.round(Math.min(0.15, 0.04 + (s - 4) * 0.02) * 100);
+}
+
+function cssAttrValue(value) {
+  return String(value).replace(/["\\]/g, '\\$&');
+}
+
+/** Captures a stable selector for the focused element inside `container` so it can be re-focused after innerHTML re-renders. */
+function captureFocusSelector(container) {
+  if (typeof document === 'undefined' || !container) return null;
+  const el = document.activeElement;
+  if (!el || el === document.body || !container.contains(el)) return null;
+  if (el.id) return `#${cssAttrValue(el.id)}`;
+  const attrs = Array.from(el.attributes || [])
+    .filter((a) => a.name.startsWith('data-') && a.value !== '')
+    .map((a) => `[${a.name}="${cssAttrValue(a.value)}"]`);
+  return attrs.length ? `${el.tagName.toLowerCase()}${attrs.join('')}` : null;
+}
+
+function restoreFocusSelector(container, selector) {
+  if (!selector || !container) return;
+  try {
+    const el = container.querySelector(selector);
+    if (el && typeof el.focus === 'function') el.focus({ preventScroll: true });
+  } catch {
+    // Ignore invalid selectors
+  }
+}
+
 function buildRotomFaceSvg(mood = 'curious') {
   const safeMood = VALID_MOODS.has(mood) ? mood : 'curious';
   let eyes = '';
@@ -110,24 +153,27 @@ function createInitialManipState(hintBundle) {
   const cfg = hintBundle?.tier2?.config || {};
 
   if (type === 'tenFrame') {
-    const target = Number(cfg.target) > 10 ? 20 : 10;
     const mode = cfg.mode || 'add';
-    const filledA = clamp(Number(cfg.filledA) || 0, 0, target);
-    const filledB = clamp(Number(cfg.filledB) || 0, 0, target);
+    const rawA = clamp(Number(cfg.filledA) || 0, 0, 20);
+    const rawB = clamp(Number(cfg.filledB) || 0, 0, 20);
+    let target = Number(cfg.target) > 10 ? 20 : 10;
+    if (rawA > 10 || (mode === 'add' && rawA + rawB > 10)) target = 20;
+    const filledA = Math.min(rawA, target);
     const cells = Array.from({ length: target }, () => 'empty');
     for (let i = 0; i < filledA; i += 1) {
       cells[i] = 'a';
     }
-    if (mode === 'sub') {
-      for (let k = 0; k < Math.min(filledA, filledB); k += 1) {
-        cells[filledA - 1 - k] = 'crossed';
-      }
-    } else {
-      for (let j = 0; j < filledB && filledA + j < target; j += 1) {
-        cells[filledA + j] = 'b';
-      }
-    }
-    return { type, target, mode, cells };
+    // Anti-Spoiler: Group A starts filled. The student places Group B (addition)
+    // or crosses out the take-away amount (subtraction) themselves.
+    return {
+      type,
+      target,
+      mode,
+      cells,
+      startA: filledA,
+      goalB: mode === 'sub' ? 0 : Math.min(rawB, target - filledA),
+      goalCross: mode === 'sub' ? Math.min(rawB, filledA) : 0
+    };
   }
 
   if (type === 'numberLine') {
@@ -149,7 +195,9 @@ function createInitialManipState(hintBundle) {
       secondH: clamp(Number(cfg.secondHundreds) || 0, 0, 9),
       secondT: clamp(Number(cfg.secondTens) || 0, 0, 9),
       secondO: clamp(Number(cfg.secondOnes) || 0, 0, 9),
-      op: cfg.op || 'placeValue'
+      op: cfg.op || 'placeValue',
+      askPlace: ['hundreds', 'tens', 'ones', 'value', 'compose'].includes(cfg.askPlace) ? cfg.askPlace : null,
+      touched: false
     };
   }
 
@@ -158,13 +206,31 @@ function createInitialManipState(hintBundle) {
     const cols = clamp(Number(cfg.cols) || 3, 1, 12);
     const mode = cfg.mode || 'mul';
     const total = clamp(Number(cfg.total) || rows * cols, 1, 144);
-    const shaded = clamp(Number(cfg.shaded) || 0, 0, total);
-    const highlightedRows = mode === 'mul' ? [0] : [];
+    const highlightedRows = mode === 'mul' && rows > 1 ? [0] : [];
     const shadedCells = [];
-    if (mode === 'fraction' || mode === 'equivFraction') {
+    let baseNum = 0;
+    if (mode === 'fraction') {
+      // The golden parts are the GIVEN picture; the student counts them by tapping.
+      const shaded = clamp(Number(cfg.shaded) || 0, 0, Math.min(total, rows * cols));
       for (let i = 0; i < shaded; i += 1) shadedCells.push(i);
+    } else if (mode === 'equivFraction') {
+      // Anti-Spoiler: only the known base fraction (first row) is pre-shaded,
+      // never the unknown equivalent numerator.
+      baseNum = clamp(Number(cfg.baseNum ?? cfg.shaded) || 0, 0, cols);
+      for (let i = 0; i < baseNum; i += 1) shadedCells.push(i);
     }
-    return { type, rows, cols, mode, total, highlightedRows, shadedCells };
+    return {
+      type,
+      rows,
+      cols,
+      mode,
+      total,
+      highlightedRows,
+      shadedCells,
+      countedCells: [],
+      baseNum,
+      initialShaded: shadedCells.join(',')
+    };
   }
 
   if (type === 'comparisonScale') {
@@ -214,6 +280,7 @@ export function createRotomPane(containerEl, context = {}) {
     totalSolved: 0,
     sessionAccuracy: 100
   };
+  let explicitMetrics = {};
   let manipState = null;
 
   function notifyManipInteract(detail) {
@@ -253,13 +320,26 @@ export function createRotomPane(containerEl, context = {}) {
       else if (c === 'crossed') countCrossed += 1;
     }
 
-    let readout = `${countA} + ${countB} = ${countA + countB}`;
+    // Anti-Spoiler: never print the solved total / difference — only the parts
+    // the student has built, plus a nudge to count.
+    let readout = '';
     if (state.mode === 'sub') {
-      readout = `${countA + countCrossed} − ${countCrossed} = ${countA} left`;
+      const goal = Number(state.goalCross) || 0;
+      readout = `Start: ${state.startA} | Crossed out: ${countCrossed}`;
+      readout += goal > 0 && countCrossed < goal
+        ? ` of ${goal} — tap Red tokens to cross them out!`
+        : ' — count the Red tokens left!';
     } else if (state.mode === 'makeTen') {
-      const total = countA + countB;
-      readout = `${countA} + ${countB} = ${total} (${Math.max(0, 10 - total)} spaces to 10)`;
+      readout = `Red: ${countA} | Gold: ${countB}`;
+      readout += countA + countB >= 10 ? ' — frame full! Count the Gold tokens.' : ' — add Gold to fill the frame to 10!';
+    } else if (state.mode === 'missing') {
+      readout = `Red: ${countA} | Gold: ${countB} | Total: ${countA + countB} — add Gold until you reach the total!`;
+    } else {
+      const goal = Number(state.goalB) || 0;
+      readout = `Red: ${countA} | Gold: ${countB}`;
+      readout += goal > 0 && countB < goal ? ` of ${goal} — tap empty slots to place Gold!` : ' — count total!';
     }
+    const isSub = state.mode === 'sub';
 
     const framesHtml = frames
       .map((offset) => {
@@ -295,12 +375,15 @@ export function createRotomPane(containerEl, context = {}) {
       .join('');
 
     return `
-      <div class="manip-box manip-tenframe">
+      <div class="manip-box manip-tenframe" data-mode="${escapeHtml(state.mode)}">
         <div class="manip-tenframe-stack">${framesHtml}</div>
-        <div class="manip-readout tabular-nums">${escapeHtml(readout)}</div>
+        <div class="manip-readout tabular-nums" aria-live="polite">${escapeHtml(readout)}</div>
         <div class="manip-controls-row">
-          <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="tenframe-add">+1 Token</button>
-          <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="tenframe-sub">-1 Token</button>
+          ${isSub
+            ? `<button type="button" class="btn-3d btn-sm btn-secondary" data-manip="tenframe-sub">✗ Cross Out 1</button>
+               <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="tenframe-add">↺ Undo 1</button>`
+            : `<button type="button" class="btn-3d btn-sm btn-secondary" data-manip="tenframe-add">+1 Gold</button>
+               <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="tenframe-sub">−1 Gold</button>`}
           <button type="button" class="btn-3d btn-sm btn-ghost" data-manip="manip-reset">Reset</button>
         </div>
       </div>
@@ -375,41 +458,62 @@ export function createRotomPane(containerEl, context = {}) {
   }
 
   function renderBase10Html(state) {
-    const total = state.h * 100 + state.t * 10 + state.o;
     const flats = Array.from({ length: Math.min(state.h, 9) }, () => '<span class="b10-flat" title="100 Flat"></span>').join('');
     const rods = Array.from({ length: Math.min(state.t, 12) }, () => '<span class="b10-rod" title="10 Rod"></span>').join('');
     const cubes = Array.from({ length: Math.min(state.o, 12) }, () => '<span class="b10-cube" title="1 Cube"></span>').join('');
     const secondTotal = state.secondH * 100 + state.secondT * 10 + state.secondO;
 
+    // Anti-Spoiler: digit questions ("what digit is in the tens place?") hide the
+    // asked column's count until the student starts working with the blocks.
+    const hiddenPlace = !state.touched && ['hundreds', 'tens', 'ones'].includes(state.askPlace)
+      ? state.askPlace
+      : null;
+    const colCount = (place, n) => (hiddenPlace === place ? '?' : String(n));
+    const placeWord = { hundreds: 'Hundreds flats', tens: 'Tens rods', ones: 'Ones cubes' };
+
+    let readout = '';
+    if (hiddenPlace) {
+      readout = `Count the ${placeWord[hiddenPlace]} — how many are there?`;
+    } else {
+      // Block counts only (e.g. '4 Hundreds, 3 Tens, 2 Ones'), never the composed total.
+      const parts = [];
+      if (state.h > 0) parts.push(`${state.h} ${state.h === 1 ? 'Hundred' : 'Hundreds'}`);
+      parts.push(`${state.t} ${state.t === 1 ? 'Ten' : 'Tens'}`);
+      parts.push(`${state.o} ${state.o === 1 ? 'One' : 'Ones'}`);
+      readout = parts.join(', ');
+      if (state.o >= 10) readout += ' — trade 10 Ones for 1 Ten!';
+      else if (state.t >= 10) readout += ' — trade 10 Tens for 1 Hundred!';
+    }
+
     return `
       <div class="manip-box manip-base10">
         <div class="manip-base10-cols">
           <div class="b10-col">
-            <span class="b10-col-title tabular-nums">100s (${state.h})</span>
+            <span class="b10-col-title tabular-nums">100s (${colCount('hundreds', state.h)})</span>
             <div class="b10-pieces-wrap">${flats || '<span class="sr-only">0</span>'}</div>
             <div class="manip-controls-row">
-              <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="b10-adj" data-place="h" data-delta="-1">-</button>
-              <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="b10-adj" data-place="h" data-delta="1">+</button>
+              <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="b10-adj" data-place="h" data-delta="-1" aria-label="Remove a Hundreds flat">-</button>
+              <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="b10-adj" data-place="h" data-delta="1" aria-label="Add a Hundreds flat">+</button>
             </div>
           </div>
           <div class="b10-col">
-            <span class="b10-col-title tabular-nums">10s (${state.t})</span>
+            <span class="b10-col-title tabular-nums">10s (${colCount('tens', state.t)})</span>
             <div class="b10-pieces-wrap">${rods || '<span class="sr-only">0</span>'}</div>
             <div class="manip-controls-row">
-              <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="b10-adj" data-place="t" data-delta="-1">-</button>
-              <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="b10-adj" data-place="t" data-delta="1">+</button>
+              <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="b10-adj" data-place="t" data-delta="-1" aria-label="Remove a Tens rod">-</button>
+              <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="b10-adj" data-place="t" data-delta="1" aria-label="Add a Tens rod">+</button>
             </div>
           </div>
           <div class="b10-col">
-            <span class="b10-col-title tabular-nums">1s (${state.o})</span>
+            <span class="b10-col-title tabular-nums">1s (${colCount('ones', state.o)})</span>
             <div class="b10-pieces-wrap">${cubes || '<span class="sr-only">0</span>'}</div>
             <div class="manip-controls-row">
-              <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="b10-adj" data-place="o" data-delta="-1">-</button>
-              <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="b10-adj" data-place="o" data-delta="1">+</button>
+              <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="b10-adj" data-place="o" data-delta="-1" aria-label="Remove a Ones cube">-</button>
+              <button type="button" class="btn-3d btn-sm btn-secondary" data-manip="b10-adj" data-place="o" data-delta="1" aria-label="Add a Ones cube">+</button>
             </div>
           </div>
         </div>
-        <div class="manip-readout tabular-nums">${state.h * 100} + ${state.t * 10} + ${state.o} = ${total}</div>
+        <div class="manip-readout tabular-nums">${escapeHtml(readout)}</div>
         <div class="manip-controls-row">
           ${state.op === 'add' && secondTotal > 0 && !state.addedSecond
             ? `<button type="button" class="btn-3d btn-sm btn-indigo tabular-nums" data-manip="b10-add-second">+ Join ${secondTotal}</button>`
@@ -424,17 +528,23 @@ export function createRotomPane(containerEl, context = {}) {
     const isFraction = state.mode === 'fraction' || state.mode === 'equivFraction';
     const rowSet = new Set(state.highlightedRows);
     const shadedSet = new Set(state.shadedCells);
-    const visualRows = Math.min(state.rows, 8);
-    const visualCols = Math.min(state.cols, 10);
+    const countedSet = new Set(state.countedCells || []);
+    // Show the full array (state is clamped to 12×12) so the model matches the problem.
+    const visualRows = Math.min(state.rows, 12);
+    const visualCols = Math.min(state.cols, 12);
 
     const rowsHtml = Array.from({ length: visualRows }, (_, r) => {
       const isRowActive = rowSet.has(r);
       const cellsHtml = Array.from({ length: visualCols }, (_, c) => {
         const idx = r * state.cols + c;
         const isLit = isFraction ? shadedSet.has(idx) : isRowActive;
+        const isCounted = state.mode === 'fraction' && countedSet.has(idx);
         const berryColor = isLit ? '#E3350D' : '#3B82F6';
+        const stateLabel = state.mode === 'fraction'
+          ? `${isLit ? 'golden' : 'plain'}${isCounted ? ', counted' : ''}`
+          : isLit ? 'shaded' : 'plain';
         return `
-          <button type="button" class="berry-cell ${isLit ? 'is-highlighted' : ''}" data-manip="berry-cell" data-row="${r}" data-idx="${idx}" aria-label="Berry row ${r + 1} column ${c + 1}">
+          <button type="button" class="berry-cell ${isLit ? 'is-highlighted' : ''} ${isCounted ? 'is-counted' : ''}" data-manip="berry-cell" data-row="${r}" data-idx="${idx}" aria-label="Berry row ${r + 1} column ${c + 1}, ${stateLabel}" aria-pressed="${state.mode === 'fraction' ? isCounted : isLit}">
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
               <path d="M12 3c3 0 5 2 5 4-3 0-4-1-5-4Z" fill="#22C55E"/>
               <circle cx="12" cy="14" r="7" fill="${berryColor}"/>
@@ -445,23 +555,38 @@ export function createRotomPane(containerEl, context = {}) {
 
       return `
         <div class="berry-row">
-          ${!isFraction ? `<button type="button" class="berry-row-btn tabular-nums ${isRowActive ? 'is-active' : ''}" data-manip="berry-row" data-row="${r}" title="Toggle row ${r + 1}">R${r + 1}</button>` : ''}
+          ${!isFraction ? `<button type="button" class="berry-row-btn tabular-nums ${isRowActive ? 'is-active' : ''}" data-manip="berry-row" data-row="${r}" title="Toggle row ${r + 1}" aria-pressed="${isRowActive}">R${r + 1}</button>` : ''}
           ${cellsHtml}
         </div>
       `;
     }).join('');
 
+    // Anti-Spoiler: readouts report only what the student has tapped/counted,
+    // never 'a/b' fractions or solved products.
     let readout = '';
-    if (isFraction) {
-      readout = `${shadedSet.size} shaded out of ${state.total} equal parts (${shadedSet.size}/${state.total})`;
+    if (state.mode === 'fraction') {
+      let countedGolden = 0;
+      for (const idx of countedSet) if (shadedSet.has(idx)) countedGolden += 1;
+      readout = countedSet.size === 0
+        ? 'Tap each golden berry to count it, then count every berry!'
+        : `Golden counted: ${countedGolden} | Berries counted: ${countedSet.size}`;
+    } else if (state.mode === 'equivFraction') {
+      const untouched = state.shadedCells.slice().sort((a, b) => a - b).join(',') === state.initialShaded;
+      readout = untouched
+        ? `Row 1 shows ${state.baseNum} shaded of ${state.cols}. Shade the same in every row, then count!`
+        : `Shaded so far: ${shadedSet.size} — make every row match Row 1, then count!`;
     } else if (state.mode === 'div') {
-      readout = `${rowSet.size} of ${state.rows} groups × ${state.cols} per group = ${rowSet.size * state.cols}`;
+      readout = `Groups lit: ${rowSet.size} of ${state.rows} | Berries lit: ${rowSet.size * state.cols}`;
+    } else if (rowSet.size === 0) {
+      readout = 'Tap a row button to light it up!';
+    } else if (rowSet.size < state.rows) {
+      readout = `${rowSet.size} of ${state.rows} rows lit = ${rowSet.size * state.cols} berries so far`;
     } else {
-      readout = `${rowSet.size} rows × ${state.cols} berries = ${rowSet.size * state.cols}`;
+      readout = 'All rows lit — count every berry!';
     }
 
     return `
-      <div class="manip-box manip-berry-array">
+      <div class="manip-box manip-berry-array" data-mode="${escapeHtml(state.mode)}">
         <div class="manip-berry-grid">${rowsHtml}</div>
         <div class="manip-readout tabular-nums">${escapeHtml(readout)}</div>
         <div class="manip-controls-row">
@@ -535,12 +660,20 @@ export function createRotomPane(containerEl, context = {}) {
       tiltDeg = 7;
     }
 
-    const leftText = state.weighedLeft ? `${state.leftExpr} = ${state.leftVal}` : state.leftExpr;
-    const rightText = state.weighedRight ? `${state.rightExpr} = ${state.rightVal}` : state.rightExpr;
+    const panText = (expr, val, weighed) => {
+      if (!weighed) return expr;
+      return String(expr).trim() === String(val) ? `${val} ✓` : `${expr} → ${val}`;
+    };
+    const leftText = panText(state.leftExpr, state.leftVal, state.weighedLeft);
+    const rightText = panText(state.rightExpr, state.rightVal, state.weighedRight);
+    // Anti-Spoiler: the scale tilts, but the readout never prints < = >.
     let readout = 'Tap Left Pan or Right Pan to weigh both sides!';
     if (state.weighedLeft && state.weighedRight) {
-      const sym = state.leftVal < state.rightVal ? '<' : state.leftVal > state.rightVal ? '>' : '=';
-      readout = `${state.leftVal} ${sym} ${state.rightVal}`;
+      readout = 'Both pans weighed! Look at the tilt — which sign fits?';
+    } else if (state.weighedLeft) {
+      readout = 'Left pan weighed — now weigh the Right pan!';
+    } else if (state.weighedRight) {
+      readout = 'Right pan weighed — now weigh the Left pan!';
     }
 
     return `
@@ -656,20 +789,21 @@ export function createRotomPane(containerEl, context = {}) {
   }
 
   function renderMetricsHtml() {
-    const streak = Number(currentMetrics.streak ?? currentProfile?.sessionStreak ?? 0);
-    const chargePct = clamp(Math.round(currentMetrics.chargePct ?? Math.min(100, (streak / 4) * 100)), 0, 100);
-    const shinyPct = Math.round(currentMetrics.shinyBonusPct ?? 0);
-    const solved = Number(currentMetrics.totalSolved ?? currentProfile?.totalSolved ?? 0);
+    const streak = Math.max(0, Number(currentMetrics.streak) || 0);
+    const chargePct = clamp(Math.round(Number(currentMetrics.chargePct) || 0), 0, 100);
+    const shinyPct = clamp(Math.round(Number(currentMetrics.shinyBonusPct) || 0), 0, 100);
+    const solved = Math.max(0, Number(currentMetrics.totalSolved) || 0);
+    const critical = Boolean(currentMetrics.criticalReady) || chargePct >= 100;
 
     return `
-      <div class="charge-meter-card" data-rotom-metrics>
+      <div class="charge-meter-card ${critical ? 'is-critical' : ''}" data-rotom-metrics>
         <div class="section-heading" style="margin-bottom:2px;">
           <span>Combo &amp; Charge Meter</span>
-          <span class="tabular-nums" style="font-size:0.76rem;color:${currentMetrics.criticalReady || chargePct >= 100 ? 'var(--poke-red)' : 'var(--poke-indigo)'};">
-            ${currentMetrics.criticalReady || chargePct >= 100 ? '⚡ CRITICAL READY' : `${chargePct}%`}
+          <span class="tabular-nums" style="font-size:0.76rem;color:${critical ? 'var(--poke-red)' : 'var(--poke-indigo)'};">
+            ${critical ? '⚡ CRITICAL READY' : `${chargePct}%`}
           </span>
         </div>
-        <div class="meter-track">
+        <div class="meter-track" role="progressbar" aria-label="Combo charge" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${chargePct}">
           <div class="meter-fill evo-bar-fill" style="width:${chargePct}%;"></div>
         </div>
         <div class="metrics-grid">
@@ -763,6 +897,10 @@ export function createRotomPane(containerEl, context = {}) {
   function paint() {
     if (!containerEl) return;
 
+    // Stability: keep the pane's scroll position and keyboard focus across re-renders.
+    const prevScrollTop = containerEl.scrollTop || 0;
+    const focusSelector = captureFocusSelector(containerEl);
+
     containerEl.innerHTML = `
       <div class="rotom-header-card">
         <div class="rotom-face-row">
@@ -785,6 +923,10 @@ export function createRotomPane(containerEl, context = {}) {
       ${renderMasteryHtml()}
     `;
 
+    if (prevScrollTop > 0) {
+      containerEl.scrollTop = prevScrollTop;
+    }
+    restoreFocusSelector(containerEl, focusSelector);
     updateMobileHintBadge();
   }
 
@@ -800,24 +942,37 @@ export function createRotomPane(containerEl, context = {}) {
     }
 
     if (manipState.type === 'tenFrame') {
+      const cells = manipState.cells;
+      const isSub = manipState.mode === 'sub';
       if (action === 'tenframe-cell') {
         const idx = Number(target.dataset.idx);
-        const cur = manipState.cells[idx];
-        if (manipState.mode === 'sub') {
-          manipState.cells[idx] = cur === 'a' ? 'crossed' : cur === 'crossed' ? 'a' : cur === 'empty' ? 'b' : 'empty';
-        } else {
-          manipState.cells[idx] = cur === 'empty' ? 'b' : 'empty';
+        const cur = cells[idx];
+        if (isSub) {
+          // Subtraction: tap Red tokens to cross out / restore them.
+          if (cur === 'a') cells[idx] = 'crossed';
+          else if (cur === 'crossed') cells[idx] = 'a';
+        } else if (cur === 'empty') {
+          cells[idx] = 'b';
+        } else if (cur === 'b') {
+          cells[idx] = 'empty';
         }
         notifyManipInteract({ idx });
       } else if (action === 'tenframe-add') {
-        const emptyIdx = manipState.cells.indexOf('empty');
-        if (emptyIdx !== -1) manipState.cells[emptyIdx] = 'b';
+        if (isSub) {
+          const idx = cells.indexOf('crossed');
+          if (idx !== -1) cells[idx] = 'a';
+        } else {
+          const emptyIdx = cells.indexOf('empty');
+          if (emptyIdx !== -1) cells[emptyIdx] = 'b';
+        }
         notifyManipInteract({ add: 1 });
       } else if (action === 'tenframe-sub') {
-        let idx = manipState.cells.lastIndexOf('b');
-        if (idx === -1) idx = manipState.cells.lastIndexOf('a');
-        if (idx !== -1) {
-          manipState.cells[idx] = manipState.mode === 'sub' && manipState.cells[idx] === 'a' ? 'crossed' : 'empty';
+        if (isSub) {
+          const idx = cells.lastIndexOf('a');
+          if (idx !== -1) cells[idx] = 'crossed';
+        } else {
+          const idx = cells.lastIndexOf('b');
+          if (idx !== -1) cells[idx] = 'empty';
         }
         notifyManipInteract({ sub: 1 });
       }
@@ -854,6 +1009,7 @@ export function createRotomPane(containerEl, context = {}) {
         if (place === 'h') manipState.h = clamp(manipState.h + delta, 0, 12);
         if (place === 't') manipState.t = clamp(manipState.t + delta, 0, 19);
         if (place === 'o') manipState.o = clamp(manipState.o + delta, 0, 19);
+        manipState.touched = true;
         notifyManipInteract({ place, delta });
         paint();
       } else if (action === 'b10-add-second') {
@@ -861,6 +1017,7 @@ export function createRotomPane(containerEl, context = {}) {
         manipState.t = clamp(manipState.t + manipState.secondT, 0, 19);
         manipState.o = clamp(manipState.o + manipState.secondO, 0, 19);
         manipState.addedSecond = true;
+        manipState.touched = true;
         notifyManipInteract({ joinedSecond: true });
         paint();
       }
@@ -875,6 +1032,15 @@ export function createRotomPane(containerEl, context = {}) {
         else set.add(row);
         manipState.highlightedRows = [...set].sort((a, b) => a - b);
         notifyManipInteract({ row });
+        paint();
+      } else if (action === 'berry-cell' && manipState.mode === 'fraction') {
+        // Fraction pictures: tapping counts a berry (golden parts stay as given).
+        const idx = Number(target.dataset.idx);
+        const set = new Set(manipState.countedCells);
+        if (set.has(idx)) set.delete(idx);
+        else set.add(idx);
+        manipState.countedCells = [...set];
+        notifyManipInteract({ idx, counted: set.has(idx) });
         paint();
       } else if (action === 'berry-cell') {
         const idx = Number(target.dataset.idx);
@@ -962,11 +1128,10 @@ export function createRotomPane(containerEl, context = {}) {
   function render(profile) {
     currentProfile = profile || null;
     if (profile) {
-      currentMetrics = {
-        ...currentMetrics,
+      applyMetrics({
         streak: profile.sessionStreak ?? currentMetrics.streak ?? 0,
         totalSolved: profile.totalSolved ?? currentMetrics.totalSolved ?? 0
-      };
+      }, { keepExplicit: true });
     }
     paint();
   }
@@ -1007,10 +1172,40 @@ export function createRotomPane(containerEl, context = {}) {
     paint();
   }
 
+  /**
+   * Canonical metrics payload: { streak, chargePct, criticalReady, shinyBonusPct, totalSolved }.
+   * chargePct / shinyBonusPct / criticalReady are derived from `streak` whenever omitted.
+   * Explicit values are remembered only while the streak they were sent with is unchanged.
+   */
+  function applyMetrics(input = {}, { keepExplicit = false } = {}) {
+    const src = input && typeof input === 'object' ? input : {};
+    const prevStreak = Math.max(0, Number(currentMetrics.streak) || 0);
+    const streak = isFiniteNumber(src.streak) ? Math.max(0, Math.round(Number(src.streak))) : prevStreak;
+    const streakChanged = streak !== prevStreak;
+
+    if (!keepExplicit || streakChanged) {
+      explicitMetrics = {};
+    }
+    if (!keepExplicit) {
+      if (isFiniteNumber(src.chargePct)) explicitMetrics.chargePct = clamp(Number(src.chargePct), 0, 100);
+      if (isFiniteNumber(src.shinyBonusPct)) explicitMetrics.shinyBonusPct = clamp(Number(src.shinyBonusPct), 0, 100);
+      if (typeof src.criticalReady === 'boolean') explicitMetrics.criticalReady = src.criticalReady;
+    }
+
+    const chargePct = explicitMetrics.chargePct ?? deriveChargePct(streak);
+    const shinyBonusPct = explicitMetrics.shinyBonusPct ?? deriveShinyBonusPct(streak);
+    const criticalReady = explicitMetrics.criticalReady ?? chargePct >= 100;
+    const totalSolved = isFiniteNumber(src.totalSolved)
+      ? Math.max(0, Number(src.totalSolved))
+      : Math.max(0, Number(currentMetrics.totalSolved) || 0);
+
+    currentMetrics = { ...currentMetrics, streak, chargePct, shinyBonusPct, criticalReady, totalSolved };
+  }
+
   function updateMetrics(metrics = {}) {
-    currentMetrics = { ...currentMetrics, ...metrics };
+    applyMetrics(metrics);
     const existing = containerEl?.querySelector?.('[data-rotom-metrics]');
-    if (existing) {
+    if (existing && typeof document !== 'undefined') {
       const wrapper = document.createElement('div');
       wrapper.innerHTML = renderMetricsHtml().trim();
       if (wrapper.firstElementChild) {

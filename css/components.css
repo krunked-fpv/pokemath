@@ -1722,7 +1722,7 @@
 .vfx-floating-text {
   position: absolute;
   left: 50%;
-  top: 34%;
+  top: calc(34% - (var(--float-stack, 0) * 38px));
   transform: translate3d(-50%, 0, 0);
   pointer-events: none;
   z-index: 35;
@@ -1733,15 +1733,38 @@
   font-weight: 900;
   text-shadow: 0 2px 0 rgba(15, 23, 42, 0.3);
   white-space: nowrap;
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .vfx-float-damage { background: rgba(227, 53, 13, 0.92); color: #FFFFFF; }
 .vfx-float-crit { background: linear-gradient(135deg, #FFCB05, #F97316); color: #1E293B; font-size: 1.35rem; }
 .vfx-float-xp { background: rgba(59, 76, 202, 0.92); color: #FFFFFF; }
-.vfx-float-coins { background: rgba(234, 179, 8, 0.96); color: #1E293B; }
+.vfx-float-coins,
+.vfx-float-coin { background: rgba(234, 179, 8, 0.96); color: #1E293B; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55); border: 2px solid #A16207; }
 .vfx-float-heal { background: rgba(56, 176, 0, 0.92); color: #FFFFFF; }
 .vfx-float-nice { background: rgba(14, 165, 233, 0.94); color: #FFFFFF; }
 .vfx-float-info { background: rgba(30, 41, 59, 0.92); color: #FFFFFF; }
+.vfx-float-nudge {
+  background: rgba(255, 248, 214, 0.97);
+  color: #78350F;
+  border: 2px dashed var(--poke-gold-dark);
+  text-shadow: none;
+  font-size: 1.05rem;
+}
+.vfx-float-success {
+  background: linear-gradient(135deg, #38B000, #16A34A);
+  color: #FFFFFF;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(56, 176, 0, 0.35), 0 6px 16px rgba(22, 101, 52, 0.3);
+}
+.vfx-float-love {
+  background: linear-gradient(135deg, #F472B6, #EC4899);
+  color: #FFFFFF;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.3), 0 6px 16px rgba(190, 24, 93, 0.28);
+}
 
 .vfx-confetti-layer {
   position: absolute;
@@ -1759,4 +1782,348 @@
   height: 14px;
   border-radius: 3px;
   will-change: transform, opacity;
+}
+
+
+/* ============================================================================
+   Sprint 2 Shared Game UI Primitives (SPEC §7 CSS Scoping Invariant)
+   Modes compose these instead of injecting look-alike styles:
+   .pokenav-choice-grid / .pokenav-choice-tile  — answer tiles
+   .pokenav-keypad (+ -display / -btn)          — Poké-Keypad
+   .pokenav-feedback (.is-correct/.is-nudge/.is-info/.is-critical)
+   .pokenav-tactile                             — tactile hover lift + press
+   .pokenav-celebrate / .pokenav-graze          — one-shot pulse / gentle shake
+   .pokenav-badge-sheen                         — earned badge light sweep
+   Motion is defined in animations.css and fully disabled by
+   prefers-reduced-motion and [data-reduced-motion="true"].
+   ============================================================================ */
+.pokenav-tactile,
+.pokenav-choice-tile,
+.pokenav-keypad-btn {
+  transition:
+    transform 0.12s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    filter 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+@media (hover: hover) {
+  .pokenav-tactile:hover:not(:disabled),
+  .pokenav-choice-tile:hover:not(:disabled),
+  .pokenav-keypad-btn:hover:not(:disabled) {
+    transform: translate3d(0, -2px, 0);
+    box-shadow: 0 6px 14px rgba(59, 76, 202, 0.16);
+  }
+}
+
+.pokenav-tactile:active:not(:disabled),
+.pokenav-choice-tile:active:not(:disabled),
+.pokenav-keypad-btn:active:not(:disabled) {
+  transform: translate3d(0, 2px, 0);
+  border-bottom-width: 2px;
+  box-shadow: none;
+}
+
+/* Answer choice tiles */
+.pokenav-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.pokenav-choice-tile {
+  min-height: 56px;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-strong);
+  border-bottom-width: 4px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.pokenav-choice-tile:hover:not(:disabled) {
+  border-color: var(--poke-indigo);
+  background: #F4F6FF;
+}
+
+.pokenav-choice-tile.is-selected {
+  border-color: var(--poke-indigo-dark);
+  background: var(--poke-indigo-soft);
+  box-shadow: 0 0 0 3px rgba(59, 76, 202, 0.22);
+}
+
+.pokenav-choice-tile.is-correct {
+  border-color: var(--poke-green-dark);
+  background: var(--poke-green-soft);
+  color: var(--poke-green-dark);
+  box-shadow: 0 0 0 3px rgba(56, 176, 0, 0.25);
+}
+
+.pokenav-choice-tile.is-graze {
+  border-color: var(--poke-gold-dark);
+  background: var(--poke-gold-soft);
+  color: #78350F;
+}
+
+.pokenav-choice-tile:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Poké-Keypad */
+.pokenav-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: 300px;
+  min-width: 0;
+}
+
+.pokenav-keypad-display {
+  grid-column: 1 / -1;
+  min-height: 52px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--poke-indigo);
+  background: var(--bg-card);
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pokenav-keypad-btn {
+  min-height: 50px;
+  min-width: 0;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-strong);
+  border-bottom-width: 4px;
+  background: var(--bg-card);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.pokenav-keypad-btn.is-action {
+  background: var(--bg-parchment);
+}
+
+.pokenav-keypad-btn.is-submit {
+  background: var(--poke-green);
+  border-color: var(--poke-green-dark);
+  color: #FFFFFF;
+}
+
+/* Feedback banner */
+.pokenav-feedback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-warm);
+  background: var(--bg-card-soft);
+  color: var(--text-primary);
+  font-weight: 800;
+  font-size: 0.92rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.pokenav-feedback:empty {
+  display: none;
+}
+
+.pokenav-feedback.is-correct {
+  background: var(--poke-green-soft);
+  border-color: var(--poke-green);
+  color: var(--poke-green-dark);
+}
+
+.pokenav-feedback.is-nudge {
+  background: var(--poke-gold-soft);
+  border-color: var(--poke-gold-dark);
+  color: #78350F;
+}
+
+.pokenav-feedback.is-info {
+  background: var(--poke-sky-soft);
+  border-color: var(--poke-sky);
+  color: var(--poke-sky-dark);
+}
+
+.pokenav-feedback.is-critical {
+  background: linear-gradient(135deg, #FFF8D6, #FFE7C2);
+  border-color: var(--poke-red);
+  color: var(--poke-red-dark);
+}
+
+/* Badge sheen host */
+.pokenav-badge-sheen,
+.badge-slot.is-earned {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.pokenav-badge-sheen::after,
+.badge-slot.is-earned::after {
+  content: "";
+  position: absolute;
+  inset: -40% auto -40% -60%;
+  width: 45%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
+  transform: translate3d(-120%, 0, 0) skewX(-18deg);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ============================================================================
+   Sprint 2 Shell & Rotom-Dex Polish
+   ============================================================================ */
+.buddy-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.evo-meter-btn.is-max-stage {
+  background: linear-gradient(135deg, #EEF2FF, #FFF8D6);
+  border-color: var(--poke-indigo);
+}
+
+.evo-meter-btn.is-max-stage .meter-label-row span:first-child {
+  color: var(--poke-indigo-dark);
+}
+
+.charge-meter-card.is-critical {
+  border-color: var(--poke-gold-dark);
+  box-shadow: var(--shadow-glow-gold);
+}
+
+.btn-3d.is-confirming {
+  background: var(--poke-red);
+  border-color: var(--poke-red-dark);
+  color: #FFFFFF;
+}
+
+.pokenav-modal:focus {
+  outline: none;
+}
+
+.pokenav-modal:focus-visible {
+  outline: 3px solid var(--poke-indigo);
+  outline-offset: -3px;
+}
+
+.profile-row {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.profile-row > div:first-child {
+  flex: 1 1 180px;
+}
+
+/* Responsive berry array: never wider than the Rotom-Dex pane */
+.manip-box {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.manip-berry-grid,
+.berry-row {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.berry-row {
+  width: 100%;
+  justify-content: center;
+}
+
+.berry-cell,
+.berry-row-btn {
+  flex: 0 1 26px;
+  min-width: 0;
+}
+
+.berry-cell {
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.berry-cell svg {
+  width: 100%;
+  max-width: 16px;
+  height: auto;
+}
+
+.berry-cell.is-counted {
+  border-color: var(--poke-indigo);
+  box-shadow: 0 0 0 2px rgba(59, 76, 202, 0.35);
+  position: relative;
+}
+
+.berry-cell.is-counted::after {
+  content: "✓";
+  position: absolute;
+  right: -3px;
+  top: -5px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--poke-indigo);
+  color: #FFFFFF;
+  font-size: 0.55rem;
+  font-weight: 900;
+  line-height: 13px;
+  text-align: center;
+}
+
+.tenframe-cell.is-crossed {
+  position: relative;
+  background: repeating-linear-gradient(135deg, #FFFFFF 0 6px, #FDECEC 6px 8px);
+}
+
+.tenframe-cell.is-crossed::after {
+  content: "";
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  top: 50%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--poke-red-dark);
+  transform: rotate(-35deg);
+  pointer-events: none;
+}
+
+.manip-tenframe[data-mode="sub"] .tenframe-cell.is-empty {
+  cursor: default;
 }

@@ -223,6 +223,82 @@
   animation: toastSlideIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+/* In-place modal refreshes (vault sync, profile delete) must not replay the pop-in */
+.pokenav-modal.is-static {
+  animation: none;
+}
+
+/* ============================================================================
+   Sprint 2 Shared Motion Primitives (paired with components.css)
+   ============================================================================ */
+@keyframes celebratePulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(56, 176, 0, 0.45);
+  }
+  40% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 10px rgba(56, 176, 0, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(56, 176, 0, 0);
+  }
+}
+
+@keyframes grazeShake {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    transform: translate3d(-5px, 0, 0) rotate(-1deg);
+  }
+  40% {
+    transform: translate3d(4px, 0, 0) rotate(0.8deg);
+  }
+  60% {
+    transform: translate3d(-3px, 0, 0);
+  }
+  80% {
+    transform: translate3d(2px, 0, 0);
+  }
+}
+
+@keyframes badgeSheen {
+  0%, 62% {
+    transform: translate3d(-120%, 0, 0) skewX(-18deg);
+  }
+  100% {
+    transform: translate3d(420%, 0, 0) skewX(-18deg);
+  }
+}
+
+@keyframes criticalGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(255, 203, 5, 0.35), 0 6px 18px rgba(255, 203, 5, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(255, 203, 5, 0.55), 0 8px 24px rgba(249, 115, 22, 0.35);
+  }
+}
+
+.pokenav-celebrate {
+  animation: celebratePulse 0.6s cubic-bezier(0.22, 1, 0.36, 1) 1;
+}
+
+.pokenav-graze {
+  animation: grazeShake 0.42s ease-in-out 1;
+}
+
+.pokenav-badge-sheen::after,
+.badge-slot.is-earned::after {
+  animation: badgeSheen 4.2s ease-in-out infinite;
+}
+
+.charge-meter-card.is-critical {
+  animation: criticalGlow 1.8s ease-in-out infinite;
+}
+
 /* ============================================================================
    Full Reduced-Motion Compliance (OS Setting + In-App Toggle)
    ============================================================================ */
@@ -240,8 +316,24 @@
   .evo-meter-btn.is-ready,
   #mobile-hint-badge.is-pulsing,
   .biome-particle,
-  .pkmn-shiny-star {
+  .pkmn-shiny-star,
+  .pokenav-celebrate,
+  .pokenav-graze,
+  .pokenav-badge-sheen::after,
+  .badge-slot.is-earned::after,
+  .charge-meter-card.is-critical {
     animation: none !important;
+  }
+
+  .pokenav-tactile,
+  .pokenav-choice-tile,
+  .pokenav-keypad-btn {
+    transform: none !important;
+  }
+
+  .pokenav-badge-sheen::after,
+  .badge-slot.is-earned::after {
+    display: none;
   }
 }
 
@@ -258,6 +350,22 @@
 [data-reduced-motion="true"] .evo-meter-btn.is-ready,
 [data-reduced-motion="true"] #mobile-hint-badge.is-pulsing,
 [data-reduced-motion="true"] .biome-particle,
-[data-reduced-motion="true"] .pkmn-shiny-star {
+[data-reduced-motion="true"] .pkmn-shiny-star,
+[data-reduced-motion="true"] .pokenav-celebrate,
+[data-reduced-motion="true"] .pokenav-graze,
+[data-reduced-motion="true"] .pokenav-badge-sheen::after,
+[data-reduced-motion="true"] .badge-slot.is-earned::after,
+[data-reduced-motion="true"] .charge-meter-card.is-critical {
   animation: none !important;
+}
+
+[data-reduced-motion="true"] .pokenav-tactile,
+[data-reduced-motion="true"] .pokenav-choice-tile,
+[data-reduced-motion="true"] .pokenav-keypad-btn {
+  transform: none !important;
+}
+
+[data-reduced-motion="true"] .pokenav-badge-sheen::after,
+[data-reduced-motion="true"] .badge-slot.is-earned::after {
+  display: none;
 }

@@ -83,6 +83,52 @@ function readCookieVaultStats(cookieName) {
   return { synced: false, bytes: 0 };
 }
 
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])'
+].join(',');
+
+function cssAttrValue(value) {
+  return String(value).replace(/["\\]/g, '\\$&');
+}
+
+/** Builds a stable selector for the focused element inside `container` so focus survives innerHTML re-renders. */
+function captureFocusSelector(container) {
+  if (typeof document === 'undefined' || !container) return null;
+  const el = document.activeElement;
+  if (!el || el === document.body || !container.contains(el)) return null;
+  if (el.id) return `#${cssAttrValue(el.id)}`;
+  const attrs = Array.from(el.attributes || [])
+    .filter((a) => a.name.startsWith('data-') && a.value !== '')
+    .map((a) => `[${a.name}="${cssAttrValue(a.value)}"]`);
+  return attrs.length ? `${el.tagName.toLowerCase()}${attrs.join('')}` : null;
+}
+
+function focusFirstMatch(container, selector) {
+  if (!selector || !container) return false;
+  try {
+    const el = container.querySelector(selector);
+    if (el && typeof el.focus === 'function') {
+      el.focus({ preventScroll: true });
+      return true;
+    }
+  } catch {
+    // Ignore invalid selectors
+  }
+  return false;
+}
+
+function getFocusableEls(container) {
+  if (!container) return [];
+  return Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR)).filter(
+    (el) => !el.hidden && el.getAttribute('aria-hidden') !== 'true' && (el.offsetParent !== null || el === document.activeElement)
+  );
+}
+
 /**
  * Creates and manages the PokéNav Shell UI.
  */
@@ -115,6 +161,8 @@ export function createShell(rootEls = {}, context = {}) {
   let installHandler = null;
   let installDismissed = false;
   let shownAutoHealToast = false;
+  let buddyVisualKey = null; // `${buddyId}|${shiny}|${accessories}` of the mounted Left Rail sprite
+  let modalReturnFocus = null; // { el, selector } restored when the modal closes
 
   function getActiveProfileFrom(rootState) {
     if (!rootState || !Array.isArray(rootState.profiles) || !rootState.activeProfileId) return null;
@@ -177,6 +225,7 @@ export function createShell(rootEls = {}, context = {}) {
     const ambientOn = profile ? Boolean(profile.settings?.ambient) : false;
     const speechOn = profile ? Boolean(profile.settings?.speech) : false;
     const showInstall = Boolean(installHandler && !installDismissed && !isStandaloneMode());
+    const ribbonFocus = captureFocusSelector(ribbonEl);
 
     ribbonEl.innerHTML = `
       <div class="ribbon-group ribbon-left">
@@ -232,6 +281,7 @@ export function createShell(rootEls = {}, context = {}) {
         ` : ''}
       </div>
     `;
+    focusFirstMatch(ribbonEl, ribbonFocus);
   }
 
   function renderLeftRail(profile) {
@@ -250,11 +300,18 @@ export function createShell(rootEls = {}, context = {}) {
     };
 
     const isShiny = Boolean(profile?.caught?.[buddy.id]?.shiny);
+    const nickname = String(profile?.caught?.[buddy.id]?.nickname || '').trim();
+    const displayName = nickname && nickname !== buddy.name ? `${nickname} (${buddy.name})` : buddy.name;
     const xpReq = Math.max(50, Number(buddy.evolutionXpRequired) || 100);
-    const xpVal = Number(profile?.buddyXp) || 0;
-    const xpPct = Math.min(100, Math.round(((xpVal % xpReq) / xpReq) * 100));
+    const xpVal = Math.max(0, Number(profile?.buddyXp) || 0);
+    // A non-zero exact multiple of the requirement is a FULL bar, not an empty one.
+    const xpPct = xpVal > 0 && xpVal % xpReq === 0
+      ? 100
+      : Math.min(100, Math.round(((xpVal % xpReq) / xpReq) * 100));
     const evoPct = Math.min(100, Math.max(0, Math.round(Number(profile?.evolutionMeter) || 0)));
-    const evoReady = evoPct >= 100 && Boolean(buddy.evolvesTo);
+    const canEvolve = Boolean(buddy.evolvesTo) || (Array.isArray(buddy.evolvesToOptions) && buddy.evolvesToOptions.length > 0);
+    const evoReady = evoPct >= 100 && canEvolve;
+    const evoLabel = !canEvolve ? '★ Max Stage • Shrine Training' : evoReady ? '✨ Ready to Evolve!' : '⚡ Evolution Forge';
 
     const routeCardsHtml = routes.map((route) => {
       const rp = profile?.routeProgress?.[route.id] || {
@@ -308,79 +365,105 @@ export function createShell(rootEls = {}, context = {}) {
       `;
     }).join('');
 
-    leftRailEl.innerHTML = `
-      <div class="buddy-card">
-        <div class="buddy-card-top">
-          <button type="button" class="buddy-stage" id="left-rail-buddy-stage" title="Visit Buddy Camp" aria-label="Visit Buddy Camp with ${escapeHtml(buddy.name)}"></button>
-          <div class="buddy-meta">
-            <div class="buddy-name-row">
-              <h2 class="buddy-name">${escapeHtml(buddy.name)}</h2>
-              <span class="buddy-level-badge tabular-nums">Lv.${profile?.buddyLevel ?? 1}</span>
-            </div>
-            <div class="dex-number tabular-nums" style="font-size:0.74rem;font-weight:800;color:var(--text-secondary);">
-              #${String(buddy.dexNumber).padStart(3, '0')} ${isShiny ? '✨ Shiny' : ''}
-            </div>
-            <div class="buddy-types">
-              ${(buddy.types || []).map((t) => `<span class="type-pill type-${escapeHtml(t)}">${escapeHtml(t)}</span>`).join('')}
-            </div>
-          </div>
-        </div>
+    // Stability: preserve rail scroll + keyboard focus, and keep a persistent skeleton so the
+    // buddy sprite node is reused (no flicker / animation restart) while its look is unchanged.
+    const prevScrollTop = leftRailEl.scrollTop || 0;
+    const railFocus = captureFocusSelector(leftRailEl);
 
-        <div class="meter-row">
-          <div class="meter-label-row">
-            <span>Buddy XP</span>
-            <span class="xp-readout tabular-nums">${xpVal} XP</span>
+    let buddyStage = leftRailEl.querySelector('#left-rail-buddy-stage');
+    if (!buddyStage || !leftRailEl.querySelector('[data-rail-slot="buddy-meta"]')) {
+      leftRailEl.innerHTML = `
+        <div class="buddy-card">
+          <div class="buddy-card-top">
+            <button type="button" class="buddy-stage" id="left-rail-buddy-stage" title="Visit Buddy Camp"></button>
+            <div class="buddy-meta" data-rail-slot="buddy-meta"></div>
           </div>
-          <div class="xp-bar-track">
-            <div class="xp-bar-fill" style="width:${xpPct}%;"></div>
-          </div>
+          <div class="buddy-progress" data-rail-slot="buddy-progress"></div>
         </div>
+        <div class="pokenav-card" data-rail-slot="routes"></div>
+        <div class="pokenav-card" data-rail-slot="badges"></div>
+      `;
+      buddyStage = leftRailEl.querySelector('#left-rail-buddy-stage');
+      buddyVisualKey = null;
+    }
 
-        <button type="button" id="evo-meter-btn" class="evo-meter-btn ${evoReady ? 'is-ready' : ''}" data-shell-action="go-evolution">
-          <div class="meter-label-row" style="width:100%;">
-            <span>${evoReady ? '✨ Ready to Evolve!' : '⚡ Evolution Forge'}</span>
-            <span class="tabular-nums">${evoPct}%</span>
-          </div>
-          <div class="meter-track">
-            <div class="meter-fill evo-bar-fill" style="width:${evoPct}%;"></div>
-          </div>
-        </button>
+    buddyStage.setAttribute('aria-label', `Visit Buddy Camp with ${displayName}`);
+
+    leftRailEl.querySelector('[data-rail-slot="buddy-meta"]').innerHTML = `
+      <div class="buddy-name-row">
+        <h2 class="buddy-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</h2>
+        <span class="buddy-level-badge tabular-nums">Lv.${profile?.buddyLevel ?? 1}</span>
+      </div>
+      <div class="dex-number tabular-nums" style="font-size:0.74rem;font-weight:800;color:var(--text-secondary);">
+        #${String(buddy.dexNumber).padStart(3, '0')} ${isShiny ? '✨ Shiny' : ''}
+      </div>
+      <div class="buddy-types">
+        ${(buddy.types || []).map((t) => `<span class="type-pill type-${escapeHtml(t)}">${escapeHtml(t)}</span>`).join('')}
+      </div>
+    `;
+
+    leftRailEl.querySelector('[data-rail-slot="buddy-progress"]').innerHTML = `
+      <div class="meter-row">
+        <div class="meter-label-row">
+          <span>Buddy XP</span>
+          <span class="xp-readout tabular-nums">${xpVal} XP</span>
+        </div>
+        <div class="xp-bar-track" role="progressbar" aria-label="Buddy XP" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${xpPct}">
+          <div class="xp-bar-fill" style="width:${xpPct}%;"></div>
+        </div>
       </div>
 
-      <div class="pokenav-card">
-        <h3 class="section-heading">Expedition Routes</h3>
-        <div class="route-map-list">${routeCardsHtml}</div>
-      </div>
+      <button type="button" id="evo-meter-btn" class="evo-meter-btn ${evoReady ? 'is-ready' : ''} ${canEvolve ? '' : 'is-max-stage'}" data-shell-action="go-evolution">
+        <div class="meter-label-row" style="width:100%;">
+          <span>${evoLabel}</span>
+          <span class="tabular-nums">${evoPct}%</span>
+        </div>
+        <div class="meter-track">
+          <div class="meter-fill evo-bar-fill" style="width:${evoPct}%;"></div>
+        </div>
+      </button>
+    `;
 
-      <div class="pokenav-card">
-        <h3 class="section-heading">
-          <span>Gym Badge Case</span>
-          <span class="tabular-nums" style="font-size:0.74rem;color:var(--text-secondary);">${earnedBadges.size}/6</span>
-        </h3>
-        <div class="badge-case-grid">
-          ${badgeSlotsHtml}
-          <div class="badge-slot classic-1996-slot ${classicUnlocked ? 'is-earned' : 'is-locked'}" title="Classic Trainer 1996 Heritage Emblem">
-            <svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
-              <circle cx="20" cy="20" r="17" fill="${classicUnlocked ? '#FFCB05' : '#94A3B8'}" stroke="#3B4CCA" stroke-width="3"/>
-              <path d="M5 20 A15 15 0 0 1 35 20 Z" fill="${classicUnlocked ? '#E3350D' : '#CBD5E1'}"/>
-              <circle cx="20" cy="20" r="5" fill="#FFFFFF" stroke="#1E293B" stroke-width="2"/>
-            </svg>
-            <span class="badge-slot-label" style="text-align:left;">Classic<br/>1996</span>
-          </div>
+    leftRailEl.querySelector('[data-rail-slot="routes"]').innerHTML = `
+      <h3 class="section-heading">Expedition Routes</h3>
+      <div class="route-map-list">${routeCardsHtml}</div>
+    `;
+
+    leftRailEl.querySelector('[data-rail-slot="badges"]').innerHTML = `
+      <h3 class="section-heading">
+        <span>Gym Badge Case</span>
+        <span class="tabular-nums" style="font-size:0.74rem;color:var(--text-secondary);">${earnedBadges.size}/6</span>
+      </h3>
+      <div class="badge-case-grid">
+        ${badgeSlotsHtml}
+        <div class="badge-slot classic-1996-slot ${classicUnlocked ? 'is-earned' : 'is-locked'}" title="Classic Trainer 1996 Heritage Emblem">
+          <svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
+            <circle cx="20" cy="20" r="17" fill="${classicUnlocked ? '#FFCB05' : '#94A3B8'}" stroke="#3B4CCA" stroke-width="3"/>
+            <path d="M5 20 A15 15 0 0 1 35 20 Z" fill="${classicUnlocked ? '#E3350D' : '#CBD5E1'}"/>
+            <circle cx="20" cy="20" r="5" fill="#FFFFFF" stroke="#1E293B" stroke-width="2"/>
+          </svg>
+          <span class="badge-slot-label" style="text-align:left;">Classic<br/>1996</span>
         </div>
       </div>
     `;
 
-    const buddyStage = leftRailEl.querySelector('#left-rail-buddy-stage');
-    if (buddyStage && vfx?.renderPokemonVisual) {
+    const accessories = Array.isArray(profile?.equippedAccessories) ? profile.equippedAccessories : [];
+    const nextVisualKey = `${buddy.id}|${isShiny ? 1 : 0}|${accessories.join(',')}`;
+    if (buddyStage && vfx?.renderPokemonVisual && (nextVisualKey !== buddyVisualKey || !buddyStage.firstElementChild)) {
       const visual = vfx.renderPokemonVisual(buddy, {
         shiny: isShiny,
         size: 78,
-        accessories: profile?.equippedAccessories || [],
+        accessories,
         animate: true
       });
-      buddyStage.appendChild(visual);
+      buddyStage.replaceChildren(visual);
+      buddyVisualKey = nextVisualKey;
     }
+
+    if (prevScrollTop > 0) {
+      leftRailEl.scrollTop = prevScrollTop;
+    }
+    focusFirstMatch(leftRailEl, railFocus);
   }
 
   function renderMobileNav() {
@@ -434,29 +517,89 @@ export function createShell(rootEls = {}, context = {}) {
     renderMobileNav();
   }
 
-  function closeModal() {
+  function rememberModalTrigger() {
+    if (activeModal || typeof document === 'undefined') return; // keep the original trigger on in-place refreshes
+    const el = document.activeElement;
+    if (!el || el === document.body || modalRootEl?.contains(el)) {
+      modalReturnFocus = null;
+      return;
+    }
+    modalReturnFocus = { el, selector: captureFocusSelector(document.body) };
+  }
+
+  function restoreModalTrigger() {
+    const ret = modalReturnFocus;
+    modalReturnFocus = null;
+    if (!ret || typeof document === 'undefined') return;
+    const run = () => {
+      if (activeModal) return; // another modal opened in the meantime
+      let target = ret.el && ret.el.isConnected ? ret.el : null;
+      if (!target && ret.selector) {
+        try {
+          target = document.querySelector(ret.selector);
+        } catch {
+          target = null;
+        }
+      }
+      target?.focus?.({ preventScroll: true });
+    };
+    // Defer so same-tick shell re-renders (which replace ribbon buttons) finish first.
+    if (typeof queueMicrotask === 'function') queueMicrotask(run);
+    else setTimeout(run, 0);
+  }
+
+  /**
+   * Mounts modal markup, keeps scroll on in-place refreshes, and moves focus into the dialog.
+   */
+  function mountModal(html, { preserveScroll = false, focusSelectors = [] } = {}) {
+    if (!modalRootEl) return null;
+    const prevDialog = modalRootEl.querySelector('.pokenav-modal');
+    const prevScroll = preserveScroll && prevDialog ? prevDialog.scrollTop : 0;
+    modalRootEl.innerHTML = html;
+    const dialog = modalRootEl.querySelector('.pokenav-modal');
+    if (!dialog) return null;
+    dialog.setAttribute('tabindex', '-1');
+    if (preserveScroll) {
+      dialog.classList.add('is-static');
+      if (prevScroll > 0) dialog.scrollTop = prevScroll;
+    }
+    const focused = focusSelectors.some((sel) => focusFirstMatch(dialog, sel));
+    if (!focused && typeof dialog.focus === 'function') dialog.focus({ preventScroll: true });
+    return dialog;
+  }
+
+  function closeModal({ restoreFocus = true } = {}) {
+    const wasOpen = Boolean(activeModal);
     activeModal = null;
     confirmDeleteProfileId = null;
     if (modalRootEl) modalRootEl.innerHTML = '';
+    if (wasOpen && restoreFocus) restoreModalTrigger();
+    else modalReturnFocus = null;
   }
 
   function openProfileModal() {
     if (!modalRootEl) return;
-    activeModal = 'profile';
+    rememberModalTrigger();
     confirmDeleteProfileId = null;
+    renderProfileModal();
+  }
 
+  function renderProfileModal({ preserveScroll = false, focusSelectors = [] } = {}) {
+    if (!modalRootEl) return;
+    activeModal = 'profile';
     const rootState = stateStore?.getState ? stateStore.getState() : latestRootState;
     const profiles = Array.isArray(rootState?.profiles) ? rootState.profiles : [];
     const activeId = rootState?.activeProfileId;
     const vaultName = stateStore?.VAULT_COOKIE_NAME || 'krunked-cookie-vault-v1';
     const vaultStats = readCookieVaultStats(vaultName);
 
-    modalRootEl.innerHTML = `
+    mountModal(`
       <div class="pokenav-modal" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
         <div class="modal-header">
           <h2 id="profile-modal-title" class="modal-title">Trainer Profiles &amp; Cookie Vault</h2>
           <button type="button" class="modal-close-btn" data-modal-close="true" aria-label="Close modal">×</button>
         </div>
+        <p class="sr-only" role="status" aria-live="polite" data-profile-status></p>
 
         <div class="vault-badge ${vaultStats.synced ? '' : 'is-warn'}">
           <span>
@@ -484,9 +627,12 @@ export function createShell(rootEls = {}, context = {}) {
                       </div>
                     </div>
                   </div>
-                  <div style="display:flex;gap:6px;flex-shrink:0;">
-                    ${!isAct ? `<button type="button" class="btn-3d btn-sm btn-indigo" data-profile-switch="${escapeHtml(p.id)}">Switch</button>` : ''}
-                    ${profiles.length > 1 ? `<button type="button" class="btn-3d btn-sm btn-secondary" data-profile-delete="${escapeHtml(p.id)}">${confirmDeleteProfileId === p.id ? 'Confirm?' : 'Delete'}</button>` : ''}
+                  <div class="profile-row-actions" style="display:flex;gap:6px;flex-shrink:0;">
+                    ${!isAct ? `<button type="button" class="btn-3d btn-sm btn-indigo" data-profile-switch="${escapeHtml(p.id)}" aria-label="Switch to ${escapeHtml(p.name)}">Switch</button>` : ''}
+                    ${profiles.length > 1 ? (() => {
+                      const confirming = confirmDeleteProfileId === p.id;
+                      return `<button type="button" class="btn-3d btn-sm btn-secondary ${confirming ? 'is-confirming' : ''}" data-profile-delete="${escapeHtml(p.id)}" data-profile-name="${escapeHtml(p.name)}" aria-label="${confirming ? 'Confirm delete' : 'Delete'} ${escapeHtml(p.name)}">${confirming ? 'Confirm?' : 'Delete'}</button>`;
+                    })() : ''}
                   </div>
                 </div>
               `;
@@ -545,24 +691,26 @@ export function createShell(rootEls = {}, context = {}) {
           </div>
         </div>
       </div>
-    `;
+    `, { preserveScroll, focusSelectors });
   }
 
   function openParentModal() {
     if (!modalRootEl) return;
-    activeModal = 'parent';
     const rootState = stateStore?.getState ? stateStore.getState() : latestRootState;
     const profile = getActiveProfileFrom(rootState);
     if (!profile) {
       showToast('Create a Trainer profile first!', 'warning');
       return;
     }
+    rememberModalTrigger();
+    activeModal = 'parent';
+    confirmDeleteProfileId = null;
 
     const cf = profile.customFilter || { enabled: false, operations: OPERATION_LABELS.map((o) => o.id), maxNumber: null };
     const selectedOps = new Set(Array.isArray(cf.operations) ? cf.operations : []);
     const settings = profile.settings || {};
 
-    modalRootEl.innerHTML = `
+    mountModal(`
       <form id="parent-filter-form" class="pokenav-modal" role="dialog" aria-modal="true" aria-labelledby="parent-modal-title">
         <div class="modal-header">
           <h2 id="parent-modal-title" class="modal-title">Grade Tier &amp; Parent/Coach Filter</h2>
@@ -622,7 +770,7 @@ export function createShell(rootEls = {}, context = {}) {
           <button type="submit" class="btn-3d btn-primary">Save Settings</button>
         </div>
       </form>
-    `;
+    `);
   }
 
   function render(rootState, routeIdOverride = null) {
@@ -691,16 +839,18 @@ export function createShell(rootEls = {}, context = {}) {
 
       const settingKey = btn.dataset.settingToggle;
       if (settingKey && stateStore?.updateProfile) {
+        // updateProfile() notifies subscribers, which already re-render the shell;
+        // setAudioSettings() owns the ambient loop, so no extra toggleAmbientMusic() call.
         const updated = stateStore.updateProfile((draft) => {
           draft.settings[settingKey] = !draft.settings[settingKey];
         });
         if (updated) {
-          audio?.setAudioSettings?.(updated.settings);
-          if (settingKey === 'ambient') {
-            audio?.toggleAmbientMusic?.(updated.settings.ambient);
-          }
+          // Patch only the toggled channel (ambient loop start is idempotent in audio.js).
+          audio?.setAudioSettings?.({ [settingKey]: Boolean(updated.settings?.[settingKey]) });
           audio?.playClick?.('toggle');
-          render(stateStore.getState());
+          if (typeof stateStore.subscribe !== 'function') {
+            render(stateStore.getState());
+          }
         }
       }
     });
@@ -709,7 +859,7 @@ export function createShell(rootEls = {}, context = {}) {
   if (leftRailEl) {
     leftRailEl.addEventListener('click', (event) => {
       if (event.target?.closest?.('#left-rail-buddy-stage')) {
-        audio?.playClick?.('tap');
+        audio?.playClick?.('love');
         closeDrawers();
         onNavigate?.('camp', { tab: 'camp' });
         return;
@@ -728,7 +878,7 @@ export function createShell(rootEls = {}, context = {}) {
       if (btn.dataset.routeSelect) {
         const routeId = btn.dataset.routeSelect;
         selectedRouteId = routeId;
-        audio?.playClick?.('tap');
+        audio?.playClick?.('select');
         closeDrawers();
         renderLeftRail(getActiveProfileFrom(latestRootState));
         onSelectRoute?.(routeId);
@@ -809,15 +959,29 @@ export function createShell(rootEls = {}, context = {}) {
       const deleteBtn = event.target?.closest?.('[data-profile-delete]');
       if (deleteBtn && stateStore?.deleteProfile) {
         const id = deleteBtn.dataset.profileDelete;
+        const status = modalRootEl.querySelector('[data-profile-status]');
         if (confirmDeleteProfileId !== id) {
+          // Step 1: arm the confirm IN PLACE (no re-render) so scroll & focus stay put.
           confirmDeleteProfileId = id;
-          openProfileModal();
+          modalRootEl.querySelectorAll('[data-profile-delete]').forEach((btn) => {
+            const armed = btn.dataset.profileDelete === id;
+            const name = btn.dataset.profileName || 'trainer';
+            btn.textContent = armed ? 'Confirm?' : 'Delete';
+            btn.classList.toggle('is-confirming', armed);
+            btn.setAttribute('aria-label', `${armed ? 'Confirm delete' : 'Delete'} ${name}`);
+          });
+          if (status) status.textContent = `Press Confirm again to delete ${deleteBtn.dataset.profileName || 'this trainer'}.`;
+          audio?.playClick?.('select');
           return;
         }
+        // Step 2: delete, then refresh the list keeping the modal scroll position.
         stateStore.deleteProfile(id);
         confirmDeleteProfileId = null;
         audio?.playClick?.('back');
-        openProfileModal();
+        renderProfileModal({
+          preserveScroll: true,
+          focusSelectors: ['[data-profile-delete]', '[data-profile-switch]', 'input[name="name"]']
+        });
         const nextState = stateStore.getState();
         render(nextState);
         onProfileChanged?.(getActiveProfileFrom(nextState), nextState);
@@ -830,7 +994,7 @@ export function createShell(rootEls = {}, context = {}) {
         const action = actionBtn.dataset.profileAction;
         if (action === 'sync-vault') {
           const ok = stateStore?.syncCookieVault?.();
-          openProfileModal();
+          renderProfileModal({ preserveScroll: true, focusSelectors: ['[data-profile-action="sync-vault"]'] });
           showToast(ok ? 'Cookie Vault synced!' : 'Vault saved in memory.', ok ? 'success' : 'info');
         } else if (action === 'export-json' && stateStore?.exportSaveJSON) {
           const json = stateStore.exportSaveJSON();
@@ -951,10 +1115,50 @@ export function createShell(rootEls = {}, context = {}) {
     });
   }
 
+  if (modalRootEl) {
+    // Focus trap: Tab / Shift+Tab cycle inside the open dialog.
+    modalRootEl.addEventListener('keydown', (event) => {
+      if (!activeModal || event.key !== 'Tab') return;
+      const dialog = modalRootEl.querySelector('.pokenav-modal');
+      if (!dialog) return;
+      const items = getFocusableEls(dialog);
+      const active = typeof document !== 'undefined' ? document.activeElement : null;
+      if (items.length === 0) {
+        event.preventDefault();
+        dialog.focus({ preventScroll: true });
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey) {
+        if (active === first || active === dialog || !dialog.contains(active)) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !dialog.contains(active)) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+  }
+
+  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    // If focus escapes the open dialog (e.g. programmatic focus elsewhere), pull it back in.
+    document.addEventListener('focusin', (event) => {
+      if (!activeModal || !modalRootEl) return;
+      const dialog = modalRootEl.querySelector('.pokenav-modal');
+      if (dialog && event.target instanceof Node && !dialog.contains(event.target)) {
+        dialog.focus({ preventScroll: true });
+      }
+    });
+  }
+
   if (typeof window !== 'undefined') {
     window.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         if (activeModal) {
+          event.preventDefault();
+          audio?.playClick?.('close');
           closeModal();
         } else if (openDrawerSide) {
           closeDrawers();
