@@ -1,8 +1,9 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   TIERS,
@@ -31,6 +32,7 @@ import {
   syncCookieVault,
 } from '../js/core/state.js';
 import * as audio from '../js/core/audio.js';
+import { renderPokemonVisual } from '../js/ui/vfx.js';
 import {
   STARTER_IDS,
   POKEMON_ROSTER,
@@ -320,6 +322,170 @@ function createMockCookieDoc() {
     },
     getValue(name) {
       return jar.get(name) ?? null;
+    },
+  };
+}
+
+function createMockDomElement(tagName, namespaceURI = 'http://www.w3.org/1999/xhtml') {
+  const classSet = new Set();
+  const attributes = new Map();
+  const listeners = new Map();
+  const children = [];
+  const style = {
+    setProperty(prop, value) {
+      this[String(prop)] = String(value);
+    },
+    getPropertyValue(prop) {
+      return this[String(prop)] ?? '';
+    },
+  };
+
+  const el = {
+    tagName:
+      namespaceURI === 'http://www.w3.org/2000/svg'
+        ? String(tagName)
+        : String(tagName).toUpperCase(),
+    namespaceURI,
+    children,
+    parentNode: null,
+    dataset: {},
+    style,
+    innerHTML: '',
+    get className() {
+      return [...classSet].join(' ');
+    },
+    set className(val) {
+      classSet.clear();
+      for (const token of String(val ?? '').trim().split(/\s+/)) {
+        if (token) classSet.add(token);
+      }
+    },
+    classList: {
+      add(...tokens) {
+        for (const token of tokens) {
+          if (token) classSet.add(String(token));
+        }
+      },
+      remove(...tokens) {
+        for (const token of tokens) {
+          classSet.delete(String(token));
+        }
+      },
+      contains(token) {
+        return classSet.has(String(token));
+      },
+      toggle(token, force) {
+        const key = String(token);
+        if (force === undefined) {
+          if (classSet.has(key)) {
+            classSet.delete(key);
+            return false;
+          }
+          classSet.add(key);
+          return true;
+        }
+        if (force) {
+          classSet.add(key);
+          return true;
+        }
+        classSet.delete(key);
+        return false;
+      },
+    },
+    setAttribute(name, value) {
+      const key = String(name);
+      const val = String(value);
+      if (key === 'class') {
+        el.className = val;
+        return;
+      }
+      attributes.set(key, val);
+    },
+    getAttribute(name) {
+      const key = String(name);
+      if (key === 'class') return el.className;
+      return attributes.has(key) ? attributes.get(key) : null;
+    },
+    appendChild(child) {
+      child.parentNode = el;
+      children.push(child);
+      return child;
+    },
+    addEventListener(type, listener) {
+      const key = String(type);
+      if (!listeners.has(key)) listeners.set(key, []);
+      listeners.get(key).push(listener);
+    },
+    removeEventListener(type, listener) {
+      const list = listeners.get(String(type));
+      if (!list) return;
+      const idx = list.indexOf(listener);
+      if (idx >= 0) list.splice(idx, 1);
+    },
+    dispatchEvent(event) {
+      const evt = typeof event === 'string' ? { type: event } : event;
+      const list = [...(listeners.get(String(evt.type)) || [])];
+      for (const listener of list) {
+        listener.call(el, evt);
+      }
+      return true;
+    },
+    querySelector(selector) {
+      const matchesSingle = (node, sel) => {
+        const trimmed = sel.trim();
+        if (!trimmed) return false;
+        const dotIdx = trimmed.indexOf('.');
+        if (dotIdx === 0) {
+          return node.classList.contains(trimmed.slice(1));
+        }
+        if (dotIdx > 0) {
+          const expectedTag = trimmed.slice(0, dotIdx).toLowerCase();
+          const expectedClass = trimmed.slice(dotIdx + 1);
+          return (
+            node.tagName.toLowerCase() === expectedTag &&
+            node.classList.contains(expectedClass)
+          );
+        }
+        return node.tagName.toLowerCase() === trimmed.toLowerCase();
+      };
+
+      for (const child of children) {
+        if (matchesSingle(child, selector)) return child;
+        const nested = child.querySelector(selector);
+        if (nested) return nested;
+      }
+      return null;
+    },
+    get outerHTML() {
+      const tag = el.tagName.toLowerCase();
+      const attrs = [];
+      if (el.className) attrs.push(`class="${el.className}"`);
+      for (const [k, v] of attributes.entries()) {
+        attrs.push(`${k}="${v}"`);
+      }
+      if (el.src) attrs.push(`src="${el.src}"`);
+      if (el.alt) attrs.push(`alt="${el.alt}"`);
+      const attrStr = attrs.length > 0 ? ` ${attrs.join(' ')}` : '';
+      if (tag === 'img') return `<img${attrStr}>`;
+      const body =
+        children.length > 0
+          ? children.map((c) => c.outerHTML).join('')
+          : String(el.innerHTML || '');
+      return `<${tag}${attrStr}>${body}</${tag}>`;
+    },
+  };
+
+  return el;
+}
+
+function createMockDomDocument() {
+  return {
+    documentElement: { dataset: {} },
+    createElement(tagName) {
+      return createMockDomElement(tagName, 'http://www.w3.org/1999/xhtml');
+    },
+    createElementNS(ns, tagName) {
+      return createMockDomElement(tagName, ns);
     },
   };
 }
@@ -793,6 +959,122 @@ describe('4. State Engine, Multi-Profile, Streak Rollover & Cookie Vault Torture
     assert.ok(lastHttpsWrite.includes('SameSite=Lax'));
     assert.ok(cookieDoc.getValue(VAULT_COOKIE_NAME).length < 3600);
   });
+
+  it('reloads cold state module via subprocess without RangeError and heals from cookie vault', () => {
+    const seedStorage = createMockStorage();
+    const seedCookieDoc = createMockCookieDoc();
+    const seedClock = new Date(2026, 7, 10, 12, 0, 0).getTime();
+
+    initState({ storage: seedStorage, cookieDoc: seedCookieDoc, protocol: 'http:', now: () => seedClock });
+    const created = createProfile({ name: 'RedReload', tier: 'ace', starterId: 'bulbasaur' });
+    updateProfile((draft) => {
+      draft.coins = 777;
+      draft.stardust = 45;
+      draft.badges = ['sprout-badge', 'geode-badge'];
+      draft.caught.pikachu = { count: 2, shiny: true, firstCaughtAt: seedClock, nickname: 'Volt' };
+    });
+
+    const seededStorageJson = seedStorage.getItem(STORAGE_KEY);
+    const seededCookieVal = seedCookieDoc.getValue(VAULT_COOKIE_NAME);
+    assert.ok(seededStorageJson && seededCookieVal);
+
+    const stateModuleUrl = pathToFileURL(path.join(ROOT_DIR, 'js/core/state.js')).href;
+    const coldChildScript = [
+      "import assert from 'node:assert/strict';",
+      'const modUrl = process.env.POKEMATH_STATE_URL;',
+      'const mode = process.env.POKEMATH_COLD_MODE;',
+      "const seedStorage = process.env.POKEMATH_SEED_STORAGE || '';",
+      "const seedCookie = process.env.POKEMATH_SEED_COOKIE || '';",
+      'const { initState, getActiveProfile, getLastHealSource, STORAGE_KEY, VAULT_COOKIE_NAME } = await import(modUrl);',
+      'const store = new Map();',
+      "if (mode === 'both' && seedStorage) store.set(STORAGE_KEY, seedStorage);",
+      'const storage = {',
+      '  getItem: (k) => (store.has(k) ? store.get(k) : null),',
+      '  setItem: (k, v) => { store.set(String(k), String(v)); },',
+      '  removeItem: (k) => { store.delete(String(k)); },',
+      '  clear: () => { store.clear(); },',
+      '};',
+      'const jar = new Map();',
+      'if (seedCookie) jar.set(VAULT_COOKIE_NAME, seedCookie);',
+      'const cookieDoc = {',
+      '  get cookie() {',
+      "    return [...jar.entries()].map(([k, v]) => k + '=' + v).join('; ');",
+      '  },',
+      '  set cookie(line) {',
+      "    const first = String(line).split(';')[0];",
+      "    const eq = first.indexOf('=');",
+      '    if (eq > 0) {',
+      '      const name = first.slice(0, eq).trim();',
+      '      const val = first.slice(eq + 1).trim();',
+      '      if (!val || /max-age=0\\b/i.test(String(line))) jar.delete(name);',
+      '      else jar.set(name, val);',
+      '    }',
+      '  },',
+      '};',
+      'const root = initState({',
+      '  storage,',
+      '  cookieDoc,',
+      "  protocol: 'http:',",
+      '  now: () => Number(process.env.POKEMATH_TEST_NOW),',
+      '});',
+      'const active = getActiveProfile();',
+      'const healSource = getLastHealSource();',
+      'const repopulatedRaw = storage.getItem(STORAGE_KEY);',
+      'assert.equal(root.profiles.length, 1);',
+      'assert.ok(active !== null);',
+      'process.stdout.write(JSON.stringify({',
+      '  profileCount: root.profiles.length,',
+      '  active,',
+      '  healSource,',
+      "  storageRepopulated: typeof repopulatedRaw === 'string' && repopulatedRaw.length > 0,",
+      '  repopulatedRaw,',
+      '}));',
+    ].join('\n');
+
+    const runColdCase = (mode) => {
+      const stdout = execFileSync(
+        process.execPath,
+        ['--input-type=module', '-e', coldChildScript],
+        {
+          cwd: ROOT_DIR,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            POKEMATH_STATE_URL: stateModuleUrl,
+            POKEMATH_COLD_MODE: mode,
+            POKEMATH_SEED_STORAGE: seededStorageJson,
+            POKEMATH_SEED_COOKIE: seededCookieVal,
+            POKEMATH_TEST_NOW: String(seedClock + 5000),
+          },
+        }
+      );
+      return JSON.parse(stdout);
+    };
+
+    const assertReloadedProfileIntact = (res, expectedHealSource) => {
+      assert.equal(res.profileCount, 1);
+      assert.equal(res.healSource, expectedHealSource);
+      assert.equal(res.active.id, created.id);
+      assert.equal(res.active.name, 'RedReload');
+      assert.equal(res.active.tier, 'ace');
+      assert.equal(res.active.activeBuddyId, 'bulbasaur');
+      assert.equal(res.active.coins, 777);
+      assert.equal(res.active.stardust, 45);
+      assert.deepEqual(res.active.badges, ['sprout-badge', 'geode-badge']);
+      assert.equal(res.active.caught.pikachu.shiny, true);
+      assert.equal(res.active.caught.pikachu.nickname, 'Volt');
+    };
+
+    // Case A: Both localStorage and krunked-cookie-vault-v1 populated with matching timestamps -> zero recursion
+    const caseA = runColdCase('both');
+    assertReloadedProfileIntact(caseA, null);
+
+    // Case B: Empty localStorage + populated krunked-cookie-vault-v1 -> cold heal & repopulate localStorage
+    const caseB = runColdCase('cookie-only');
+    assertReloadedProfileIntact(caseB, 'cookie-vault');
+    assert.equal(caseB.storageRepopulated, true);
+    assert.equal(JSON.parse(caseB.repopulatedRaw).profiles[0].coins, 777);
+  });
 });
 
 /* ============================================================================
@@ -1019,5 +1301,62 @@ describe('7. Audio Module Node-Safety & Export Verification', () => {
       assert.equal(audio.speakText('Pikachu uses Thunder Ten!', false), false);
       assert.equal(audio.speakText('Pikachu uses Thunder Ten!', true), false);
     });
+  });
+});
+
+/* ============================================================================
+ * 8. Visual Effects & Offline SVG Fallback (`js/ui/vfx.js`)
+ * ============================================================================ */
+
+describe('8. Visual Effects & Offline SVG Fallback', () => {
+  it('activates .is-fallback SVG on sprite error and renders immediately with forceSvg: true', () => {
+    const bulbasaur = POKEMON_ROSTER[0];
+    assert.equal(bulbasaur.id, 'bulbasaur');
+
+    const prevDocument = globalThis.document;
+    globalThis.document = createMockDomDocument();
+    try {
+      // 1) Offline image error fallback
+      const visual = renderPokemonVisual(bulbasaur);
+      assert.equal(visual.classList.contains('pkmn-visual'), true);
+      assert.equal(visual.classList.contains('is-fallback'), false);
+
+      const spriteImg = visual.querySelector('img.pkmn-sprite');
+      assert.ok(spriteImg, 'Expected <img class="pkmn-sprite"> child');
+      assert.equal(spriteImg.src, bulbasaur.spriteUrl);
+
+      spriteImg.dispatchEvent(new Event('error'));
+
+      assert.equal(visual.classList.contains('is-fallback'), true);
+      assert.equal(spriteImg.style.display, 'none');
+
+      const fallbackSvg = visual.querySelector('.pkmn-fallback-svg');
+      assert.ok(fallbackSvg, 'Expected .pkmn-fallback-svg child');
+      assert.equal(fallbackSvg.tagName.toLowerCase(), 'svg');
+      assert.equal(fallbackSvg.style.display, 'block');
+      assert.ok(fallbackSvg.outerHTML.includes('<svg'), 'Expected <svg markup in fallback');
+      assert.ok(fallbackSvg.innerHTML.includes('<circle') && fallbackSvg.innerHTML.includes('<path'));
+      assert.ok(visual.outerHTML.includes('<svg'));
+
+      // 2) forceSvg: true renders .is-fallback immediately without an <img>
+      const forcedVisual = renderPokemonVisual(bulbasaur, { forceSvg: true });
+      assert.equal(forcedVisual.classList.contains('pkmn-visual'), true);
+      assert.equal(forcedVisual.classList.contains('is-fallback'), true);
+      assert.equal(forcedVisual.querySelector('img'), null, 'forceSvg: true must omit <img>');
+      assert.equal(forcedVisual.querySelector('.pkmn-sprite'), null);
+
+      const forcedSvg = forcedVisual.querySelector('.pkmn-fallback-svg');
+      assert.ok(forcedSvg, 'forceSvg: true must include .pkmn-fallback-svg');
+      assert.equal(forcedSvg.tagName.toLowerCase(), 'svg');
+      assert.equal(forcedSvg.style.display, 'block');
+      assert.ok(forcedSvg.outerHTML.includes('<svg'));
+      assert.ok(forcedSvg.innerHTML.includes('<circle') && forcedSvg.innerHTML.includes('<path'));
+    } finally {
+      if (prevDocument === undefined) {
+        delete globalThis.document;
+      } else {
+        globalThis.document = prevDocument;
+      }
+    }
   });
 });
