@@ -69,6 +69,18 @@ const CLICK_VARIANTS = {
   ],
   berry: [
     { freq: 392.00, endFreq: 587.33, harmonicGain: 0.22, decay: 0.095, gain: 0.16, delay: 0 }
+  ],
+  // Crisp two-note PokéNav chime (D6 -> G6, bright and short)
+  select: [
+    { freq: 1174.66, harmonicGain: 0.30, decay: 0.055, gain: 0.12, delay: 0 },
+    { freq: 1567.98, harmonicGain: 0.34, decay: 0.10, gain: 0.13, delay: 0.052 }
+  ],
+  // Warm rising heart-bell duet: C5+E5 glow, then G5+C6 bells lifting above
+  love: [
+    { freq: 523.25, harmonicGain: 0.20, decay: 0.16, gain: 0.12, delay: 0 },
+    { freq: 659.25, harmonicGain: 0.20, decay: 0.16, gain: 0.10, delay: 0.012 },
+    { freq: 783.99, bell: true, decay: 0.34, gain: 0.085, delay: 0.11 },
+    { freq: 1046.50, bell: true, decay: 0.42, gain: 0.08, delay: 0.17 }
   ]
 };
 
@@ -148,6 +160,9 @@ let whiteNoiseBuffer = null;
 let warmBrassWave = null;
 let ambientTimerId = null;
 let ambientStepIndex = 0;
+let ambientOpened = false;
+let ambientHiddenPause = false;
+let visibilityHooked = false;
 let unlockedOnce = false;
 
 function getWindowRef() {
@@ -932,8 +947,53 @@ function stopAmbientTimer() {
     clearInterval(ambientTimerId);
     ambientTimerId = null;
   }
+  ambientOpened = false;
 }
 
+function getDocumentRef() {
+  if (typeof document === 'undefined' || !document) return null;
+  return document;
+}
+
+function isDocumentHidden() {
+  const doc = getDocumentRef();
+  return Boolean(doc && (doc.visibilityState === 'hidden' || doc.hidden === true));
+}
+
+function fadeAmbientOut(timeConstant) {
+  if (audioCtx && ambientBus && audioCtx.state !== 'closed') {
+    const now = audioCtx.currentTime;
+    ambientBus.gain.cancelScheduledValues(now);
+    ambientBus.gain.setTargetAtTime(0.0001, now, timeConstant);
+  }
+}
+
+function handleVisibilityChange() {
+  if (isDocumentHidden()) {
+    if (settings.ambient) {
+      ambientHiddenPause = true;
+      stopAmbientTimer();
+      fadeAmbientOut(0.12);
+    }
+    return;
+  }
+  if (ambientHiddenPause) {
+    ambientHiddenPause = false;
+    if (settings.ambient) startAmbientLoop();
+  }
+}
+
+function installVisibilityListener() {
+  if (visibilityHooked) return;
+  const doc = getDocumentRef();
+  if (!doc || typeof doc.addEventListener !== 'function') return;
+  try {
+    doc.addEventListener('visibilitychange', handleVisibilityChange);
+    visibilityHooked = true;
+  } catch {
+    // Ignore environments without a usable document event target
+  }
+}
 function scheduleAmbientTick() {
   if (!settings.ambient || !audioCtx || audioCtx.state !== 'running' || !ambientBus) {
     return;
@@ -962,16 +1022,25 @@ function scheduleAmbientTick() {
   }
 }
 
+/**
+ * Strictly idempotent: repeated calls never create a second interval or a
+ * second opening note. Defers while the page is hidden (resumed on visible).
+ */
 function startAmbientLoop() {
-  stopAmbientTimer();
+  if (!settings.ambient) return;
+  installVisibilityListener();
+  if (isDocumentHidden()) {
+    ambientHiddenPause = true;
+    return;
+  }
+
   const ctx = ensureAudioGraph();
   if (!ctx || !ambientBus) return;
+  ambientHiddenPause = false;
 
   if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
     ctx.resume().then(() => {
-      if (settings.ambient && ambientTimerId === null) {
-        startAmbientLoop();
-      }
+      if (settings.ambient && !isDocumentHidden()) startAmbientLoop();
     }).catch(() => {});
   }
 
@@ -979,12 +1048,14 @@ function startAmbientLoop() {
   ambientBus.gain.cancelScheduledValues(now);
   ambientBus.gain.setTargetAtTime(0.22, now, 0.18);
 
-  if (ctx.state === 'running') {
+  if (ambientTimerId === null) {
+    ambientTimerId = setInterval(scheduleAmbientTick, AMBIENT_STEP_MS);
+  }
+  if (!ambientOpened && ctx.state === 'running') {
+    ambientOpened = true;
     scheduleAmbientTick();
   }
-  ambientTimerId = setInterval(scheduleAmbientTick, AMBIENT_STEP_MS);
 }
-
 function pickFriendlyVoice(synth) {
   let voices = [];
   try {
@@ -1053,11 +1124,9 @@ export function unlockAudio() {
 
   if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
     ctx.resume().then(() => {
-      if (settings.ambient && ambientTimerId === null) {
-        startAmbientLoop();
-      }
+      if (settings.ambient) startAmbientLoop();
     }).catch(() => {});
-  } else if (settings.ambient && ambientTimerId === null) {
+  } else if (settings.ambient) {
     startAmbientLoop();
   }
 
@@ -1117,6 +1186,13 @@ export function playClick(variant = 'tap') {
   const now = ctx.currentTime;
 
   for (const note of notes) {
+    if (note.bell) {
+      playBellVoice(ctx, sfxBus, note.freq, now + (note.delay || 0), {
+        decay: note.decay,
+        gain: note.gain
+      });
+      continue;
+    }
     playMarimbaNote(ctx, sfxBus, note.freq, now + (note.delay || 0), {
       endFreq: note.endFreq || null,
       decay: note.decay,
@@ -1425,12 +1501,9 @@ export function toggleAmbientMusic(enabled) {
     return true;
   }
 
+  ambientHiddenPause = false;
   stopAmbientTimer();
-  if (audioCtx && ambientBus && audioCtx.state !== 'closed') {
-    const now = audioCtx.currentTime;
-    ambientBus.gain.cancelScheduledValues(now);
-    ambientBus.gain.setTargetAtTime(0.0001, now, 0.04);
-  }
+  fadeAmbientOut(0.04);
   return false;
 }
 
