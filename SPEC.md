@@ -19,8 +19,12 @@ All module exports, schemas, constants, and CSS tokens below are **frozen contra
   - `"start_url": "./"`
   - `"scope": "./"`
   - `"icons"`:
-    - `{ "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" }`
-    - `{ "src": "./assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }`
+    - `{ "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" }`
+    - `{ "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" }`
+    - `{ "src": "./assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }`
+    - `{ "src": "./assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }`
+- **Full Offline Precache (`sw.js`)**: `CORE_SHELL_URLS` MUST precache `./`, `./index.html`, `./manifest.json`, every `./css/*.css` stylesheet, every `./js/**/*.js` module, and app icons using relative `./` paths so first-visit installs boot 100% offline.
+- **Pages CI Gate (`.github/workflows/deploy-pages.yml`)**: Runs `node --test tests/engine.test.mjs` on Node 22 before upload and stages a clean `_site` artifact excluding `.agents/`, `.git*`, `.github/`, `tests/`, `ARCHITECTURE.md`, `SPEC.md`, and `HANDOFF.md`.
 - **PNG Icons Required on Disk**:
   - `assets/icons/icon-192.png` (`192x192`, magic bytes `89 50 4E 47 0D 0A 1A 0A`)
   - `assets/icons/icon-512.png` (`512x512`, magic bytes `89 50 4E 47 0D 0A 1A 0A`)
@@ -33,6 +37,7 @@ All module exports, schemas, constants, and CSS tokens below are **frozen contra
 ### Named Exports
 - `export const VAULT_COOKIE_NAME = 'krunked-cookie-vault-v1';`
 - `export const STORAGE_KEY = 'pokemath-state-v1';`
+- `export const BUDDY_NICKNAME_MAX_LEN = 16;`
 - `export function initState(env = {})` -> returns `RootState`. `env` optionally accepts `{ storage, cookieDoc, protocol, now }` for deterministic Node testing.
 - `export function getState()` -> returns deep/safe snapshot of `RootState`.
 - `export function getActiveProfile()` -> returns active `TrainerProfile` or `null` if onboarding not completed.
@@ -40,6 +45,7 @@ All module exports, schemas, constants, and CSS tokens below are **frozen contra
 - `export function createProfile(data)` -> creates new `TrainerProfile` (`{ name, tier, starterId, avatarColor }`), sets it active, persists & notifies.
 - `export function deleteProfile(profileId)` -> deletes profile safely (if active deleted, selects remaining or `null`), persists & notifies.
 - `export function updateProfile(mutatorFn)` -> calls `mutatorFn(draftProfile)`, stamps `updatedAt`, handles calendar-day streak checks, persists to `localStorage` + `krunked-cookie-vault-v1`, notifies subscribers, returns updated profile.
+- `export function setBuddyNickname(speciesId, name)` -> sets/clears the active profile's `caught[speciesId].nickname` (collapses whitespace, caps at `BUDDY_NICKNAME_MAX_LEN` = 16 chars, clears to `null` on empty/null), persists & notifies, returning the updated caught entry or `null` if uncaught.
 - `export function subscribe(listenerFn)` -> registers `(state, activeProfile) => void`, returns `unsubscribe()` function.
 - `export function exportSaveJSON()` -> returns formatted JSON string of full state.
 - `export function exportSaveCode()` -> returns compact base64url-encoded string (`PM1.<payload>`) suitable for copy/paste transfer.
@@ -114,8 +120,8 @@ All module exports, schemas, constants, and CSS tokens below are **frozen contra
 }
 ```
 
-### Cookie Vault Size Invariant
-`encodeURIComponent(compactPayload)` in `krunked-cookie-vault-v1` MUST remain strictly under `3600` bytes by storing compact keys (`v`, `ap`, `ts`, `p[]` with abbreviated field codes and compact caught arrays `[id, count, shiny01]` or compacted dex entries) and cleanly expanding back into full `TrainerProfile` objects on `healFromCookieVault()` with all defaults filled.
+### Cookie Vault Size & Rolling Mastery Invariant
+`encodeURIComponent(compactPayload)` in `krunked-cookie-vault-v1` MUST remain strictly under `3600` bytes by storing compact keys (`v`, `ap`, `ts`, `p[]` with abbreviated field codes, compact caught arrays, and compact packed last-10 `rolling` mastery booleans inside each `sm[tag]` entry) and cleanly expanding back into full `TrainerProfile` objects on `healFromCookieVault()` with all defaults filled. `DEFAULT_QUEST_TEMPLATES` use canonical metrics (`solve_total`, `solve_streak`, `catch_pokemon`) while normalizing legacy saved metrics (`totalSolved`, `sessionStreak`, `catches`).
 
 ---
 
@@ -161,6 +167,7 @@ All module exports, schemas, constants, and CSS tokens below are **frozen contra
     - 30-problem anti-repeat ring buffer with deterministic cap of 25 generation retries so it never loops infinitely even under narrow custom filters.
 - `export function validateAnswer(problem, userAnswer)` -> returns `boolean` (`true` if mathematically equivalent / exact match).
 - `export function generateMoveSetProblems(tier, filterConfig, adaptiveState, routeId)` -> returns `{ quick: ProblemSpec, power: ProblemSpec, charge: ProblemSpec }` matched to easier warm-up, grade-level target, and stretch challenge.
+- `export function formatSkillTag(skillTag)` -> returns a warm kid-friendly display label for any curriculum `skillTag` (e.g., `'add_within_20'` -> `'Addition to 20'`, `'word_2step_champion'` -> `'Champion Story'`), with clean fallback for unknown tags.
 
 ### `js/core/hintEngine.js`
 - `export function buildHintBundle(problemSpec)` -> returns **`HintBundle`**:
@@ -211,7 +218,7 @@ All module exports, schemas, constants, and CSS tokens below are **frozen contra
 ### Named Exports (100% Node-import-safe — guard `window` / `AudioContext` / `speechSynthesis`)
 - `export function unlockAudio()`
 - `export function setAudioSettings({ sfx, ambient, speech })`
-- `export function playClick(variant = 'tap')`
+- `export function playClick(variant = 'tap')` (supports `'tap'`, `'select'`, `'love'`, and existing UI click variants; zero square/sawtooth buzzers)
 - `export function playCorrectChime(streakCount = 1)`
 - `export function playGentleNudge()`
 - `export function playAttackSFX(pokemonType = 'normal', movePower = 'power')`
@@ -220,7 +227,7 @@ All module exports, schemas, constants, and CSS tokens below are **frozen contra
 - `export function playCatchFanfare()`
 - `export function playEvolutionSymphony()`
 - `export function playBadgeFanfare()`
-- `export function toggleAmbientMusic(enabled)`
+- `export function toggleAmbientMusic(enabled)` (strictly idempotent loop scheduling; installs Node-safe `document.visibilitychange` fade/pause on hidden and resume on visible)
 - `export function speakText(text, force = false)`
 
 ---
@@ -302,18 +309,18 @@ All module exports, schemas, constants, and CSS tokens below are **frozen contra
   - Returns an `HTMLElement` (`<div class="pkmn-visual ...">`) containing `<img class="pkmn-sprite">` (unless `forceSvg`) paired with a resilient inline `<svg class="pkmn-fallback-svg">` chibi elemental crest + optional `<div class="pkmn-accessory-layer">` + shiny sparkles. Whenever `img` fires `error` or `forceSvg` is true, `pkmn-visual` toggles `.is-fallback` to display the SVG cleanly with zero broken image state.
 - `export function mountBiomeBackdrop(container, biomeKey)`
 - `export function playElementalAttackVFX(stageEl, elementType, intensity = 'power')`
-- `export function spawnFloatingText(stageEl, text, variant = 'damage')`
+- `export function spawnFloatingText(stageEl, text, variant = 'damage')` (styled variants: `'damage' | 'crit' | 'xp' | 'coins' | 'coin' | 'heal' | 'nice' | 'info' | 'nudge' | 'success' | 'love'`)
 - `export function burstConfetti(stageEl, palette = ['#E3350D', '#FFCB05', '#3B4CCA', '#38B000'])`
 
 ### `js/ui/rotomPane.js`
 - `export function createRotomPane(containerEl, context)`
   - Returns `{ render(profile), setProblem(problemSpec, hintBundle), openHintTier(tierNum), cycleHintTier(), setMood(mood, message), updateMetrics(metrics), getCurrentHintTier() }`.
-  - Renders animated Rotom-Dex SVG face, Read-Aloud trigger, 3-Tier Hint Accordion, interactive live manipulatives (`tenFrame`, `numberLine`, `base10`, `berryArray`, `partWhole`, `comparisonScale`), Combo/Charge meter, claimable Mini-Quests, and Skill Mastery bars.
+  - Renders animated Rotom-Dex SVG face, Read-Aloud trigger, 3-Tier Hint Accordion, anti-spoiler interactive live manipulatives (`tenFrame`, `numberLine`, `base10`, `berryArray`, `partWhole`, `comparisonScale`), Combo/Charge meter, Shiny Radar, claimable Mini-Quests, and Skill Mastery bars.
 
 ### `js/ui/shell.js`
 - `export function createShell(rootEls, context)`
   - Returns `{ render(state), openProfileModal(), openParentModal(), openDrawer(side), closeDrawers(), showToast(msg, variant = 'info'), setInstallAvailable(handler) }`.
-  - Manages Top Trainer Ribbon, Left Buddy Card + 6-Route Map + Badge Case, Profile Switcher Modal (including `krunked-cookie-vault-v1` status badge, JSON export/import, Save Code copy/paste), Parent/Coach Custom Filter Modal, and mobile drawer state.
+  - Manages Top Trainer Ribbon, stable Left Buddy Card (with buddy nickname support and reused sprite visual node) + 6-Route Map + Badge Case, focus-trapped Profile Switcher Modal (including `krunked-cookie-vault-v1` status badge, JSON export/import, Save Code copy/paste, in-place 2-step delete confirm), focus-trapped Parent/Coach Custom Filter Modal, and mobile drawer state.
 
 ### `js/games/*.js` (`battleMode.js`, `catchMode.js`, `berryLabMode.js`, `evolutionForge.js`, `campPokedex.js`)
 - Every game module exports:
@@ -321,8 +328,8 @@ All module exports, schemas, constants, and CSS tokens below are **frozen contra
   - `export function unmount()`
   - `export function handleKey(event)` (optional keyboard action handler returning `true` if handled)
 - `context` provided by `main.js`:
-  `{ state, mathEngine, hintEngine, adaptive, audio, vfx, rotomPane, shell, pokemonData, routesData, itemsData, onNavigate, modeParams }`
-  where `onNavigate(modeId, params)` transitions cleanly among `'battle'`, `'catch'`, `'berry-lab'`, `'evolution-forge'`, `'gym'`, and `'camp'`.
+  `{ state, mathEngine, hintEngine, adaptive, audio, vfx, rotomPane, shell, speedBlitz, pokemonData, routesData, itemsData, onNavigate, modeParams }`
+  where `onNavigate(modeId, params)` transitions cleanly among `'battle'`, `'catch'`, `'berry-lab'`, `'evolution-forge'`, `'gym'`, and `'camp'`, and `speedBlitz` exposes `{ isEnabled(), isBonusActive(), consumeBonus(), resetForProblem() }`.
 
 
 ---
