@@ -336,8 +336,8 @@
 .mode-tab {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 13px;
+  gap: 5px;
+  padding: 7px 10px;
   min-height: 40px;
   border-radius: var(--radius-md);
   border: 2px solid transparent;
@@ -345,7 +345,7 @@
   color: var(--text-secondary);
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   white-space: nowrap;
   flex-shrink: 0;
   transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;

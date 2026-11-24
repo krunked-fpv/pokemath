@@ -85,6 +85,11 @@ body {
   #workbench-body {
     height: calc(100dvh - var(--ribbon-h));
   }
+
+  #mode-switcher {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
 }
 
 /* Left Expedition Rail (290px) */
@@ -346,7 +351,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: var(--z-ribbon);
+    z-index: var(--z-mobile-nav);
     height: calc(var(--mobile-nav-h) + env(safe-area-inset-bottom, 0px));
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
     background: var(--bg-glass-strong);

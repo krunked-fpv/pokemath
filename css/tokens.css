@@ -92,9 +92,10 @@
 
   --z-base: 1;
   --z-sticky: 20;
-  --z-drawer-backdrop: 90;
-  --z-drawer: 100;
-  --z-ribbon: 110;
+  --z-ribbon: 80;
+  --z-drawer-backdrop: 100;
+  --z-drawer: 110;
+  --z-mobile-nav: 120;
   --z-modal: 200;
   --z-toast: 300;
 }

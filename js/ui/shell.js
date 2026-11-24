@@ -114,6 +114,7 @@ export function createShell(rootEls = {}, context = {}) {
   let confirmDeleteProfileId = null;
   let installHandler = null;
   let installDismissed = false;
+  let shownAutoHealToast = false;
 
   function getActiveProfileFrom(rootState) {
     if (!rootState || !Array.isArray(rootState.profiles) || !rootState.activeProfileId) return null;
@@ -532,6 +533,7 @@ export function createShell(rootEls = {}, context = {}) {
           <div style="display:flex;flex-wrap:wrap;gap:8px;">
             <button type="button" class="btn-3d btn-sm btn-secondary" data-profile-action="export-json">⬇ Export JSON</button>
             <button type="button" class="btn-3d btn-sm btn-gold" data-profile-action="copy-code">📋 Copy PM1 Save Code</button>
+            <button type="button" class="btn-3d btn-sm btn-indigo" data-profile-action="test-vault-heal">🛡️ Verify Vault Auto-Heal (Clear Cache &amp; Reload)</button>
           </div>
           <label style="display:flex;flex-direction:column;gap:4px;font-size:0.78rem;font-weight:800;">
             Current Save Code / Paste Import (JSON or PM1...)
@@ -636,6 +638,10 @@ export function createShell(rootEls = {}, context = {}) {
     renderRibbon(profile);
     renderLeftRail(profile);
     renderMobileNav();
+    if (!shownAutoHealToast && stateStore?.getLastHealSource?.() === 'cookie-vault') {
+      shownAutoHealToast = true;
+      showToast('🛡️ Trainer progress auto-healed from krunked-cookie-vault-v1!', 'success');
+    }
   }
 
   function setInstallAvailable(handler) {
@@ -860,6 +866,19 @@ export function createShell(rootEls = {}, context = {}) {
             showToast(`Restored ${res.profileCount} trainer profile(s)!`, 'success');
           } else {
             showToast(res.error || 'Invalid save data.', 'error');
+          }
+        } else if (action === 'test-vault-heal') {
+          stateStore?.syncCookieVault?.();
+          if (typeof window !== 'undefined') {
+            try {
+              window.localStorage?.clear?.();
+            } catch {
+              // Ignore storage access errors in restricted frames
+            }
+          }
+          showToast('Local cache cleared — reloading to heal from krunked-cookie-vault-v1...', 'info');
+          if (typeof window !== 'undefined') {
+            window.location?.reload?.();
           }
         }
       }
