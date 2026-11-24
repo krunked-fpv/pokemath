@@ -1,0 +1,14 @@
+# Backups and logs
+*.bak
+*.cookie_bak
+*.log
+
+# Dependencies and OS artifacts
+node_modules/
+.DS_Store
+Thumbs.db
+
+# Scratch, temporary, and worktree directories
+scratch/
+tmp/
+.worktrees/
