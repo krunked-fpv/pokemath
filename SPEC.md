@@ -45,6 +45,7 @@ All module exports, schemas, constants, and CSS tokens below are **frozen contra
 - `export function exportSaveCode()` -> returns compact base64url-encoded string (`PM1.<payload>`) suitable for copy/paste transfer.
 - `export function importSaveJSON(raw)` -> accepts either JSON string or `PM1.*` save code, validates structure, hydrates state, syncs both storage & cookie vault, returns `{ ok, profileCount, error }`.
 - `export function healFromCookieVault()` -> parses `krunked-cookie-vault-v1` and reconstructs full `RootState` into `localStorage`; returns `boolean` (`true` if healed).
+- `export function getLastHealSource()` -> returns `'cookie-vault' | 'storage-regenerated' | null` from the latest `initState()`.
 - `export function syncCookieVault()` -> serializes compact representation strictly `< 3600` bytes into `document.cookie` using `krunked-cookie-vault-v1=<encoded>; path=/; max-age=31536000; SameSite=Lax` plus `; Secure` ONLY when `protocol === 'https:'` (never on `http:`).
 
 ### `TrainerProfile` Schema
