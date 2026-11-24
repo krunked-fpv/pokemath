@@ -4,7 +4,6 @@
  */
 
 const STYLE_ELEMENT_ID = 'pm-battle-mode-styles';
-const SPEED_BLITZ_MS = 15000;
 
 const TYPE_COLORS = {
   normal: '#94A3B8',
@@ -71,9 +70,9 @@ let sessionToken = 0;
 let container = null;
 let ctx = null;
 let stateSession = null;
+let clickHandler = null;
 
 const activeTimeouts = new Set();
-const activeIntervals = new Set();
 
 function trackTimeout(fn, delayMs) {
   const token = sessionToken;
@@ -86,25 +85,9 @@ function trackTimeout(fn, delayMs) {
   return id;
 }
 
-function trackInterval(fn, intervalMs) {
-  const token = sessionToken;
-  const id = setInterval(() => {
-    if (!mounted || token !== sessionToken) {
-      clearInterval(id);
-      activeIntervals.delete(id);
-      return;
-    }
-    fn();
-  }, intervalMs);
-  activeIntervals.add(id);
-  return id;
-}
-
 function clearAllTimers() {
   for (const id of activeTimeouts) clearTimeout(id);
   activeTimeouts.clear();
-  for (const id of activeIntervals) clearInterval(id);
-  activeIntervals.clear();
 }
 
 function escapeHtml(value) {
@@ -140,7 +123,7 @@ function injectBattleStyles() {
       color: var(--text-main, #1E293B);
       font-family: var(--font-sans, "Nunito", "Quicksand", "Segoe UI", system-ui, sans-serif);
     }
-    .pm-battle-root .pm-num {
+    .pm-battle-root .pm-battle-num {
       font-variant-numeric: tabular-nums;
     }
     .pm-battle-banner {
@@ -192,7 +175,7 @@ function injectBattleStyles() {
       gap: 8px;
       flex-wrap: wrap;
     }
-    .pm-stat-chip {
+    .pm-battle-stat-chip {
       display: inline-flex;
       align-items: center;
       gap: 5px;
@@ -204,13 +187,13 @@ function injectBattleStyles() {
       font-weight: 800;
       font-variant-numeric: tabular-nums;
     }
-    .pm-stat-chip.is-crit {
+    .pm-battle-stat-chip.is-crit {
       background: linear-gradient(135deg, #FEF3C7, #FDE68A);
       border-color: #D97706;
       color: #92400E;
       box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
     }
-    .pm-gym-header {
+    .pm-battle-gym-header {
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -220,19 +203,19 @@ function injectBattleStyles() {
       border-radius: 18px;
       box-shadow: 0 6px 18px rgba(245, 158, 11, 0.14);
     }
-    .pm-gym-top {
+    .pm-battle-gym-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
       flex-wrap: wrap;
     }
-    .pm-gym-leader-card {
+    .pm-battle-gym-leader-card {
       display: flex;
       align-items: center;
       gap: 12px;
     }
-    .pm-gym-crest {
+    .pm-battle-gym-crest {
       width: 56px;
       height: 56px;
       border-radius: 16px;
@@ -242,7 +225,7 @@ function injectBattleStyles() {
       border: 2px solid #E2D5BE;
       flex-shrink: 0;
     }
-    .pm-gym-quote {
+    .pm-battle-gym-quote {
       margin: 0;
       padding: 8px 12px;
       border-radius: 12px;
@@ -252,12 +235,12 @@ function injectBattleStyles() {
       font-weight: 700;
       color: #334155;
     }
-    .pm-gym-phases {
+    .pm-battle-gym-phases {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
     }
-    .pm-phase-step {
+    .pm-battle-phase-step {
       padding: 8px 10px;
       border-radius: 12px;
       background: #F8FAFC;
@@ -270,17 +253,17 @@ function injectBattleStyles() {
       justify-content: space-between;
       gap: 6px;
     }
-    .pm-phase-step.is-active {
+    .pm-battle-phase-step.is-active {
       background: #FEF3C7;
       border-color: #F59E0B;
       color: #92400E;
     }
-    .pm-phase-step.is-done {
+    .pm-battle-phase-step.is-done {
       background: #DCFCE7;
       border-color: #22C55E;
       color: #166534;
     }
-    .pm-arena {
+    .pm-battle-arena {
       position: relative;
       overflow: hidden;
       border-radius: 22px;
@@ -294,13 +277,13 @@ function injectBattleStyles() {
       gap: 12px;
       box-shadow: 0 10px 26px rgba(30, 41, 59, 0.10);
     }
-    .pm-arena-bg {
+    .pm-battle-arena-bg {
       position: absolute;
       inset: 0;
       z-index: 0;
       pointer-events: none;
     }
-    .pm-arena-grid {
+    .pm-battle-arena-grid {
       position: relative;
       z-index: 2;
       display: grid;
@@ -308,19 +291,19 @@ function injectBattleStyles() {
       gap: 14px;
       align-items: center;
     }
-    .pm-fighter {
+    .pm-battle-fighter {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 8px;
     }
-    .pm-fighter.is-opponent {
+    .pm-battle-fighter.is-opponent {
       align-items: flex-end;
     }
-    .pm-fighter.is-buddy {
+    .pm-battle-fighter.is-buddy {
       align-items: flex-start;
     }
-    .pm-hud-card {
+    .pm-battle-hud-card {
       width: 100%;
       max-width: 270px;
       background: rgba(255, 255, 255, 0.93);
@@ -330,14 +313,14 @@ function injectBattleStyles() {
       padding: 10px 12px;
       box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
     }
-    .pm-hud-top {
+    .pm-battle-hud-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 6px;
       margin-bottom: 6px;
     }
-    .pm-hud-name {
+    .pm-battle-hud-name {
       font-weight: 900;
       font-size: 0.96rem;
       color: #0F172A;
@@ -346,7 +329,7 @@ function injectBattleStyles() {
       gap: 5px;
       flex-wrap: wrap;
     }
-    .pm-type-badge {
+    .pm-battle-type-badge {
       display: inline-block;
       padding: 2px 8px;
       border-radius: 999px;
@@ -356,7 +339,7 @@ function injectBattleStyles() {
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
-    .pm-shiny-tag {
+    .pm-battle-shiny-tag {
       display: inline-flex;
       align-items: center;
       gap: 3px;
@@ -367,7 +350,7 @@ function injectBattleStyles() {
       font-size: 0.68rem;
       font-weight: 900;
     }
-    .pm-hp-row {
+    .pm-battle-hp-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -376,7 +359,7 @@ function injectBattleStyles() {
       color: #475569;
       margin-bottom: 4px;
     }
-    .pm-hp-track {
+    .pm-battle-hp-track {
       width: 100%;
       height: 13px;
       border-radius: 999px;
@@ -384,19 +367,19 @@ function injectBattleStyles() {
       border: 1.5px solid #CBD5E1;
       overflow: hidden;
     }
-    .pm-hp-fill {
+    .pm-battle-hp-fill {
       height: 100%;
       border-radius: 999px;
       background: linear-gradient(90deg, #22C55E, #4ADE80);
       transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1), background-color 240ms ease;
     }
-    .pm-hp-fill.is-mid {
+    .pm-battle-hp-fill.is-mid {
       background: linear-gradient(90deg, #F59E0B, #FBBF24);
     }
-    .pm-hp-fill.is-low {
+    .pm-battle-hp-fill.is-low {
       background: linear-gradient(90deg, #EF4444, #F87171);
     }
-    .pm-sprite-stage {
+    .pm-battle-sprite-stage {
       position: relative;
       min-height: 130px;
       display: flex;
@@ -405,7 +388,7 @@ function injectBattleStyles() {
       width: 100%;
       max-width: 240px;
     }
-    .pm-platform-shadow {
+    .pm-battle-platform-shadow {
       position: absolute;
       bottom: 6px;
       width: 130px;
@@ -414,18 +397,18 @@ function injectBattleStyles() {
       background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0));
       z-index: 0;
     }
-    .pm-sprite-wrap {
+    .pm-battle-sprite-wrap {
       position: relative;
       z-index: 1;
       transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
     }
-    .pm-sprite-wrap.is-lunging {
+    .pm-battle-sprite-wrap.is-lunging {
       transform: translate3d(26px, -10px, 0) scale(1.08);
     }
-    .pm-sprite-wrap.is-hit {
+    .pm-battle-sprite-wrap.is-hit {
       animation: pm-battle-hit 420ms ease;
     }
-    .pm-catch-ready-pill {
+    .pm-battle-catch-ready-pill {
       margin-top: 4px;
       padding: 3px 9px;
       border-radius: 999px;
@@ -436,7 +419,7 @@ function injectBattleStyles() {
       font-weight: 900;
       animation: pm-battle-pulse 1.4s ease-in-out infinite;
     }
-    .pm-impact-bar-wrap {
+    .pm-battle-impact-bar-wrap {
       position: relative;
       z-index: 2;
       background: rgba(255, 255, 255, 0.9);
@@ -447,7 +430,7 @@ function injectBattleStyles() {
       flex-direction: column;
       gap: 6px;
     }
-    .pm-impact-head {
+    .pm-battle-impact-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -456,20 +439,20 @@ function injectBattleStyles() {
       font-weight: 800;
       color: #1E293B;
     }
-    .pm-impact-track {
+    .pm-battle-impact-track {
       height: 10px;
       border-radius: 999px;
       background: #E2E8F0;
       overflow: hidden;
     }
-    .pm-impact-fill {
+    .pm-battle-impact-fill {
       height: 100%;
       width: 0%;
       border-radius: 999px;
       background: linear-gradient(90deg, #3B4CCA, #E3350D, #FFCB05);
       transition: width 360ms cubic-bezier(0.22, 1, 0.36, 1);
     }
-    .pm-catch-cta-bar {
+    .pm-battle-catch-cta-bar {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
@@ -481,62 +464,15 @@ function injectBattleStyles() {
       border: 2.5px solid #E3350D;
       box-shadow: 0 8px 22px rgba(227, 53, 13, 0.16);
     }
-    .pm-btn-3d {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      min-height: 52px;
-      padding: 10px 18px;
-      border-radius: 15px;
-      border: 2px solid #1E293B;
-      border-bottom-width: 5px;
-      font-family: inherit;
-      font-weight: 900;
-      font-size: 0.96rem;
-      cursor: pointer;
-      background: #FFFFFF;
-      color: #1E293B;
-      transition: transform 120ms ease, filter 120ms ease;
-      user-select: none;
-    }
-    .pm-btn-3d:hover {
-      filter: brightness(1.03);
-      transform: translateY(-1px);
-    }
-    .pm-btn-3d:active {
-      transform: translateY(2px);
-      border-bottom-width: 2px;
-    }
-    .pm-btn-primary {
-      background: linear-gradient(180deg, #EF4444, #E3350D);
-      border-color: #991B1B;
-      color: #FFFFFF;
-    }
-    .pm-btn-gold {
-      background: linear-gradient(180deg, #FDE047, #F59E0B);
-      border-color: #92400E;
-      color: #451A03;
-    }
-    .pm-btn-indigo {
-      background: linear-gradient(180deg, #4F46E5, #3B4CCA);
-      border-color: #1E1B4B;
-      color: #FFFFFF;
-    }
-    .pm-btn-emerald {
-      background: linear-gradient(180deg, #22C55E, #16A34A);
-      border-color: #14532D;
-      color: #FFFFFF;
-    }
-    .pm-btn-glow {
+    .pm-battle-btn-glow {
       animation: pm-battle-pulse 1.3s ease-in-out infinite;
     }
-    .pm-moves-grid {
+    .pm-battle-moves-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
     }
-    .pm-move-card {
+    .pm-battle-move-card {
       display: flex;
       flex-direction: column;
       align-items: flex-start;
@@ -553,24 +489,24 @@ function injectBattleStyles() {
       color: #0F172A;
       transition: transform 140ms ease, box-shadow 140ms ease;
     }
-    .pm-move-card:hover {
+    .pm-battle-move-card:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10);
     }
-    .pm-move-card:active {
+    .pm-battle-move-card:active {
       transform: translateY(2px);
       border-bottom-width: 3px;
     }
-    .pm-move-card.is-charge-crit {
+    .pm-battle-move-card.is-charge-crit {
       border-color: #D97706;
       background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
       box-shadow: 0 0 18px rgba(245, 158, 11, 0.25);
     }
-    .pm-move-name {
+    .pm-battle-move-name {
       font-size: 1.04rem;
       font-weight: 900;
     }
-    .pm-move-meta {
+    .pm-battle-move-meta {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -579,7 +515,7 @@ function injectBattleStyles() {
       font-weight: 800;
       color: #475569;
     }
-    .pm-problem-deck {
+    .pm-battle-problem-deck {
       background: var(--bg-card, #FFFFFF);
       border: 2.5px solid var(--border-warm, #DFD3BC);
       border-radius: 20px;
@@ -589,21 +525,21 @@ function injectBattleStyles() {
       gap: 14px;
       box-shadow: 0 8px 22px rgba(30, 41, 59, 0.08);
     }
-    .pm-problem-header {
+    .pm-battle-problem-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
       flex-wrap: wrap;
     }
-    .pm-problem-prompt {
+    .pm-battle-problem-prompt {
       font-size: 1.24rem;
       font-weight: 900;
       color: #0F172A;
       margin: 0;
       line-height: 1.35;
     }
-    .pm-problem-expr {
+    .pm-battle-problem-expr {
       display: inline-flex;
       align-items: center;
       padding: 8px 14px;
@@ -615,112 +551,37 @@ function injectBattleStyles() {
       color: #1E293B;
       margin-top: 6px;
     }
-    .pm-blitz-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .pm-blitz-track {
-      height: 8px;
-      border-radius: 999px;
-      background: #E2E8F0;
-      overflow: hidden;
-    }
-    .pm-blitz-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #22C55E, #F59E0B);
-      transition: width 180ms linear;
-    }
-    .pm-solver-grid {
+    .pm-battle-solver-grid {
       display: grid;
       grid-template-columns: 1.15fr 0.85fr;
       gap: 14px;
       align-items: start;
     }
-    .pm-choices-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-    .pm-choices-grid.is-cmp {
+    .pm-battle-choices-grid.is-cmp {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
-    .pm-choice-tile {
-      min-height: 62px;
-      padding: 12px;
-      border-radius: 16px;
-      border: 2.5px solid #CBD5E1;
-      border-bottom-width: 6px;
-      background: #FFFDF9;
-      font-family: inherit;
-      font-size: 1.35rem;
-      font-weight: 900;
-      color: #0F172A;
-      cursor: pointer;
-      transition: transform 110ms ease, border-color 110ms ease, background-color 110ms ease;
+    .pm-battle-region {
+      display: contents;
     }
-    .pm-choice-tile:hover {
-      border-color: #3B4CCA;
-      background: #EEF2FF;
-      transform: translateY(-1px);
+    .pm-battle-keypad {
+      justify-self: center;
     }
-    .pm-choice-tile:active {
-      transform: translateY(2px);
-      border-bottom-width: 2px;
+    .pm-battle-keypad .pm-battle-keypad-wide {
+      grid-column: 1 / -1;
     }
-    .pm-choice-tile.is-nudged {
-      border-color: #F59E0B;
-      background: #FEF3C7;
-      animation: pm-battle-wobble 320ms ease;
-    }
-    .pm-keypad {
-      background: #F8FAFC;
-      border: 2px solid #CBD5E1;
-      border-radius: 18px;
-      padding: 12px;
+    .pm-battle-keypad-help {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-    }
-    .pm-keypad-screen {
-      min-height: 48px;
-      padding: 8px 14px;
-      border-radius: 12px;
-      background: #0F172A;
-      color: #F8FAFC;
-      font-size: 1.45rem;
-      font-weight: 900;
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      letter-spacing: 0.04em;
-    }
-    .pm-keypad-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-    }
-    .pm-key-btn {
-      min-height: 52px;
-      border-radius: 12px;
+      gap: 6px;
+      padding: 12px;
+      border-radius: 16px;
       border: 2px solid #CBD5E1;
-      border-bottom-width: 4px;
-      background: #FFFFFF;
-      font-family: inherit;
-      font-size: 1.15rem;
-      font-weight: 900;
+      background: #F8FAFC;
+      font-size: 0.9rem;
+      font-weight: 700;
       color: #1E293B;
-      cursor: pointer;
     }
-    .pm-key-btn:active {
-      transform: translateY(2px);
-      border-bottom-width: 2px;
-    }
-    .pm-key-btn.is-action {
-      background: #F1F5F9;
-      font-size: 0.92rem;
-    }
-    .pm-victory-card {
+    .pm-battle-victory-card {
       padding: 20px;
       border-radius: 22px;
       background: linear-gradient(135deg, #FEF9C3, #FFFBEB 45%, #ECFDF5);
@@ -730,35 +591,16 @@ function injectBattleStyles() {
       flex-direction: column;
       gap: 14px;
     }
-    .pm-victory-top {
+    .pm-battle-victory-top {
       display: flex;
       align-items: center;
       gap: 14px;
       flex-wrap: wrap;
     }
-    .pm-victory-actions {
+    .pm-battle-victory-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-    }
-    .pm-feedback-banner {
-      padding: 10px 14px;
-      border-radius: 14px;
-      font-weight: 800;
-      font-size: 0.92rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .pm-feedback-banner.is-success {
-      background: #DCFCE7;
-      border: 2px solid #22C55E;
-      color: #166534;
-    }
-    .pm-feedback-banner.is-nudge {
-      background: #FEF3C7;
-      border: 2px solid #F59E0B;
-      color: #92400E;
     }
     @keyframes pm-battle-hit {
       0%, 100% { transform: translate3d(0, 0, 0); }
@@ -766,57 +608,53 @@ function injectBattleStyles() {
       55% { transform: translate3d(10px, 3px, 0); }
       80% { transform: translate3d(-5px, 0, 0); }
     }
-    @keyframes pm-battle-wobble {
-      0%, 100% { transform: translate3d(0, 0, 0); }
-      30% { transform: translate3d(-6px, 0, 0); }
-      65% { transform: translate3d(6px, 0, 0); }
-    }
     @keyframes pm-battle-pulse {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.03); }
     }
     @media (max-width: 780px) {
-      .pm-moves-grid {
+      .pm-battle-moves-grid {
         grid-template-columns: 1fr;
       }
-      .pm-solver-grid {
+      .pm-battle-solver-grid {
         grid-template-columns: 1fr;
       }
-      .pm-gym-phases {
+      .pm-battle-gym-phases {
         grid-template-columns: 1fr;
       }
-      .pm-arena-grid {
+      .pm-battle-arena-grid {
         gap: 8px;
       }
     }
     @media (prefers-reduced-motion: reduce) {
-      .pm-sprite-wrap.is-hit,
-      .pm-choice-tile.is-nudged,
-      .pm-catch-ready-pill,
-      .pm-btn-glow {
+      .pm-battle-sprite-wrap.is-hit,
+      .pm-battle-catch-ready-pill,
+      .pm-battle-btn-glow {
         animation: none !important;
       }
-      .pm-hp-fill,
-      .pm-impact-fill,
-      .pm-sprite-wrap,
-      .pm-btn-3d {
+      .pm-battle-hp-fill,
+      .pm-battle-impact-fill,
+      .pm-battle-sprite-wrap {
         transition: none !important;
       }
     }
-    [data-reduced-motion="true"] .pm-sprite-wrap.is-hit,
-    [data-reduced-motion="true"] .pm-choice-tile.is-nudged,
-    [data-reduced-motion="true"] .pm-catch-ready-pill,
-    [data-reduced-motion="true"] .pm-btn-glow {
+    [data-reduced-motion="true"] .pm-battle-sprite-wrap.is-hit,
+    [data-reduced-motion="true"] .pm-battle-catch-ready-pill,
+    [data-reduced-motion="true"] .pm-battle-btn-glow {
       animation: none !important;
     }
-    [data-reduced-motion="true"] .pm-hp-fill,
-    [data-reduced-motion="true"] .pm-impact-fill,
-    [data-reduced-motion="true"] .pm-sprite-wrap,
-    [data-reduced-motion="true"] .pm-btn-3d {
+    [data-reduced-motion="true"] .pm-battle-hp-fill,
+    [data-reduced-motion="true"] .pm-battle-impact-fill,
+    [data-reduced-motion="true"] .pm-battle-sprite-wrap {
       transition: none !important;
     }
   `;
   document.head.appendChild(style);
+}
+
+function removeBattleStyles() {
+  if (typeof document === 'undefined') return;
+  document.getElementById(STYLE_ELEMENT_ID)?.remove();
 }
 
 function getGymBadgeSvg(badgeColor = '#38B000', badgeSvgKey = 'sprout') {
@@ -1052,44 +890,37 @@ function syncRotomToProblem(problem) {
   ctx.rotomPane.setMood?.(mood, msg);
 }
 
-function stopSpeedBlitzTimer() {
-  for (const id of activeIntervals) {
-    clearInterval(id);
-  }
-  activeIntervals.clear();
-  if (stateSession) {
-    stateSession.blitzRemainingMs = 0;
-    stateSession.blitzBonusActive = false;
+function formatSkillLabel(problem) {
+  const friendly = ctx?.mathEngine?.formatSkillTag?.(problem?.skillTag);
+  return friendly || problem?.operation || 'Math Adventure';
+}
+
+function isFractionProblem(problem) {
+  return problem?.format === 'fraction' || String(problem?.answer ?? '').includes('/');
+}
+
+/** Called whenever a brand-new problem is put in front of the learner. */
+function onNewProblem(problem) {
+  if (!problem || !ctx) return;
+  ctx.speedBlitz?.resetForProblem?.();
+  const profile = ctx.state?.getActiveProfile?.() || stateSession?.profile;
+  if (profile?.settings?.speech) {
+    ctx.audio?.speakText?.(problem.spokenPrompt || problem.promptText, false);
   }
 }
 
-function startSpeedBlitzIfEnabled(profile) {
-  stopSpeedBlitzTimer();
-  if (!profile?.settings?.speedBlitz || !stateSession?.activeProblem) return;
-  stateSession.blitzRemainingMs = SPEED_BLITZ_MS;
-  stateSession.blitzBonusActive = true;
-  trackInterval(() => {
-    if (!stateSession || !stateSession.awaitingAnswer) {
-      stopSpeedBlitzTimer();
-      return;
-    }
-    stateSession.blitzRemainingMs = Math.max(0, stateSession.blitzRemainingMs - 200);
-    const fillEl = container?.querySelector('.pm-blitz-fill');
-    const labelEl = container?.querySelector('.pm-blitz-label');
-    if (fillEl) {
-      const pct = Math.round((stateSession.blitzRemainingMs / SPEED_BLITZ_MS) * 100);
-      fillEl.style.width = `${pct}%`;
-    }
-    if (stateSession.blitzRemainingMs <= 0) {
-      stateSession.blitzBonusActive = false;
-      if (labelEl) {
-        labelEl.textContent = 'Speed Blitz window ended — take your time, full attack still ready!';
-      }
-      stopSpeedBlitzTimer();
-    } else if (labelEl) {
-      labelEl.textContent = `Speed Blitz Bonus: ${Math.ceil(stateSession.blitzRemainingMs / 1000)}s (+2 Coins)`;
-    }
-  }, 200);
+function buildRotomMetrics(profile, adaptiveRes, forceStreak = null) {
+  const streak = forceStreak !== null
+    ? forceStreak
+    : Math.max(0, Number(adaptiveRes?.streak ?? profile?.sessionStreak) || 0);
+  const metrics = {
+    streak,
+    criticalReady: streak >= 4 || Boolean(adaptiveRes?.triggerCriticalChallenge),
+    totalSolved: Math.max(0, Number(profile?.totalSolved) || 0),
+  };
+  const shinyRollBonus = Number(adaptiveRes?.shinyRollBonus) || 0;
+  if (shinyRollBonus > 0) metrics.shinyBonusPct = Math.round(shinyRollBonus * 100);
+  return metrics;
 }
 
 function startWildSession(preserveEncounter = false) {
@@ -1145,8 +976,6 @@ function startWildSession(preserveEncounter = false) {
       ? `Whoa! A sparkling Shiny ${wild.name} appeared! Choose a move!`
       : `A wild ${wild.name} appeared in ${route.name}! Choose a Tactical Move!`,
     statusVariant: 'info',
-    blitzRemainingMs: 0,
-    blitzBonusActive: false,
   };
 }
 
@@ -1189,8 +1018,6 @@ function startGymSession() {
     impactLabel: GYM_PHASES[0].label,
     statusMessage: `${gymLeader.name}: "${gymLeader.introQuote}"`,
     statusVariant: 'info',
-    blitzRemainingMs: 0,
-    blitzBonusActive: false,
   };
 
   stateSession.activeProblem = generateGymPhaseProblem(profile, route, 0);
@@ -1216,18 +1043,18 @@ function selectWildMove(moveKey) {
   stateSession.statusVariant = 'info';
 
   syncRotomToProblem(problem);
-  render();
-  startSpeedBlitzIfEnabled(stateSession.profile);
+  render({ keepArena: true });
+  onNewProblem(problem);
 }
 
 function getArenaEl() {
-  return container?.querySelector('.pm-arena') || null;
+  return container?.querySelector('.pm-battle-arena') || null;
 }
 
 function triggerVisualAttack(buddyType, moveKey, damageText, isCrit) {
   const arenaEl = getArenaEl();
-  const buddySprite = container?.querySelector('.pm-fighter.is-buddy .pm-sprite-wrap');
-  const wildSprite = container?.querySelector('.pm-fighter.is-opponent .pm-sprite-wrap');
+  const buddySprite = container?.querySelector('.pm-battle-fighter.is-buddy .pm-battle-sprite-wrap');
+  const wildSprite = container?.querySelector('.pm-battle-fighter.is-opponent .pm-battle-sprite-wrap');
 
   if (buddySprite) buddySprite.classList.add('is-lunging');
   if (wildSprite) wildSprite.classList.add('is-hit');
@@ -1241,6 +1068,74 @@ function triggerVisualAttack(buddyType, moveKey, damageText, isCrit) {
     buddySprite?.classList.remove('is-lunging');
     wildSprite?.classList.remove('is-hit');
   }, 460);
+}
+
+function statusIcon(variant) {
+  return variant === 'nudge' ? '💡' : variant === 'success' ? '✨' : '🧭';
+}
+
+function statusClassName(variant) {
+  return `pokenav-feedback ${variant === 'nudge' ? 'is-nudge' : variant === 'success' ? 'is-correct' : 'is-info'}`;
+}
+
+function statusInnerHtml(s) {
+  if (!s?.statusMessage) return '';
+  return `<span>${statusIcon(s.statusVariant)}</span><span>${escapeHtml(s.statusMessage)}</span>`;
+}
+
+/** Updates the feedback banner in place (no sprite/backdrop reload). */
+function patchStatus() {
+  const el = container?.querySelector('[data-battle-region="status"]');
+  if (!el || !stateSession) return;
+  el.className = statusClassName(stateSession.statusVariant);
+  el.innerHTML = statusInnerHtml(stateSession);
+}
+
+/** Updates HP bars, impact meter and the catch-ready pill in place. */
+function patchArena() {
+  const s = stateSession;
+  if (!container || !s) return;
+  const setText = (sel, value) => {
+    const el = container.querySelector(sel);
+    if (el) el.textContent = value;
+  };
+  for (const who of ['wild', 'buddy']) {
+    const hp = who === 'wild' ? s.wildHp : s.buddyHp;
+    const maxHp = who === 'wild' ? s.wildMaxHp : s.buddyMaxHp;
+    const info = renderHpPercent(hp, maxHp);
+    const fill = container.querySelector(`[data-hp-fill="${who}"]`);
+    if (fill) {
+      fill.style.width = `${info.pct}%`;
+      fill.classList.toggle('is-low', info.cls === 'is-low');
+      fill.classList.toggle('is-mid', info.cls === 'is-mid');
+    }
+    setText(`[data-hp-text="${who}"]`, `${hp} / ${maxHp}`);
+  }
+  setText('[data-impact-label]', s.impactLabel);
+  setText('[data-impact-pct]', `${s.impactPercent}%`);
+  const impactFill = container.querySelector('[data-impact-fill]');
+  if (impactFill) impactFill.style.width = `${s.impactPercent}%`;
+  const pillHost = container.querySelector('[data-catch-pill]');
+  if (pillHost) {
+    const ready = !s.isGym && s.wildHp <= Math.ceil(s.wildMaxHp * 0.35);
+    pillHost.innerHTML = ready
+      ? '<div class="pm-battle-catch-ready-pill">Weakened! Ready for Poké Ball!</div>'
+      : '';
+  }
+}
+
+function findChoiceTile(rawAnswer) {
+  if (rawAnswer === undefined || rawAnswer === null || !container) return null;
+  const want = String(rawAnswer);
+  return Array.from(container.querySelectorAll('[data-choice-val]'))
+    .find((el) => el.getAttribute('data-choice-val') === want) || null;
+}
+
+function replayClass(el, className) {
+  if (!el) return;
+  el.classList.remove(className);
+  void el.offsetWidth;
+  el.classList.add(className);
 }
 
 function submitAnswer(rawAnswer) {
@@ -1273,40 +1168,62 @@ function submitAnswer(rawAnswer) {
     stateSession.impactLabel = 'Graze — adjust and fire again!';
 
     ctx.audio?.playGentleNudge?.();
-    const arenaEl = getArenaEl();
-    if (arenaEl) {
-      ctx.vfx?.spawnFloatingText?.(arenaEl, 'Graze! Try again!', 'nudge');
-    }
     if (adaptiveRes?.autoOpenHintTier >= 1) {
       ctx.rotomPane?.openHintTier?.(adaptiveRes.autoOpenHintTier);
     }
     ctx.rotomPane?.setMood?.('encouraging', adaptiveRes?.encouragementMessage || 'Take another calm look!');
-    ctx.rotomPane?.updateMetrics?.({
-      streak: 0,
-      consecutiveMisses: adaptiveRes?.consecutiveMisses || 1,
-      shinyRollBonus: 0,
-      chargePercent: 0,
-    });
-    ctx.rotomPane?.render?.(stateSession.profile);
+    ctx.rotomPane?.updateMetrics?.(buildRotomMetrics(stateSession.profile, adaptiveRes, 0));
 
-    render();
+    // In-place nudge: sprites, backdrop and problem deck stay mounted.
+    patchStatus();
+    patchArena();
+    updateKeypadScreen();
+    const tile = findChoiceTile(rawAnswer);
+    if (tile) {
+      tile.classList.add('is-graze');
+      replayClass(tile, 'pokenav-graze');
+    } else {
+      replayClass(container?.querySelector('.pm-battle-keypad-screen'), 'pokenav-graze');
+    }
+    const arenaEl = getArenaEl();
+    if (arenaEl) {
+      ctx.vfx?.spawnFloatingText?.(arenaEl, 'Graze! Try again!', 'nudge');
+    }
     return;
   }
 
   // Correct answer!
   stateSession.awaitingAnswer = false;
   stateSession.animating = true;
-  const hadBlitzBonus = Boolean(stateSession.blitzBonusActive);
-  stopSpeedBlitzTimer();
+
+  // main.js owns the Speed Blitz window and awards +2 Coins & +2 Stardust itself.
+  const blitzBonus = ctx.speedBlitz?.consumeBonus?.() || false;
+
+  const tile = findChoiceTile(rawAnswer);
+  if (tile) {
+    tile.classList.add('is-correct');
+    replayClass(tile, 'pokenav-celebrate');
+  } else {
+    replayClass(container?.querySelector('.pm-battle-keypad-screen'), 'pokenav-celebrate');
+  }
 
   if (!stateSession.isGym) {
-    handleWildCorrect(problem, hintsUsed, buddyType, hadBlitzBonus);
+    handleWildCorrect(problem, hintsUsed, buddyType, blitzBonus);
   } else {
-    handleGymCorrect(problem, hintsUsed, buddyType, hadBlitzBonus);
+    handleGymCorrect(problem, hintsUsed, buddyType, blitzBonus);
   }
 }
 
-function handleWildCorrect(problem, hintsUsed, buddyType, hadBlitzBonus) {
+function showBlitzBonus(blitzBonus) {
+  if (!blitzBonus) return;
+  const coins = typeof blitzBonus === 'object' && Number.isFinite(Number(blitzBonus.coins))
+    ? Number(blitzBonus.coins)
+    : 2;
+  const arenaEl = getArenaEl();
+  if (arenaEl) ctx.vfx?.spawnFloatingText?.(arenaEl, `⚡ Speed Blitz +${coins}c`, 'coins');
+}
+
+function handleWildCorrect(problem, hintsUsed, buddyType, blitzBonus) {
   const moveKey = stateSession.selectedMoveKey || 'power';
   const meta = MOVE_META[moveKey] || MOVE_META.power;
   const streakBefore = stateSession.profile?.sessionStreak || 0;
@@ -1321,7 +1238,7 @@ function handleWildCorrect(problem, hintsUsed, buddyType, hadBlitzBonus) {
 
   const xpGain = meta.xp + (nextStreakEstimate >= 4 ? 5 : 0);
   const meterGain = meta.meter;
-  const coinGain = meta.coins + (hadBlitzBonus ? 2 : 0) + (isNewBattleWin ? 10 : 0);
+  const coinGain = meta.coins + (isNewBattleWin ? 10 : 0);
   const stardustGain = meta.stardust + (isNewBattleWin ? 3 : 0);
 
   let adaptiveRes = null;
@@ -1387,21 +1304,17 @@ function handleWildCorrect(problem, hintsUsed, buddyType, hadBlitzBonus) {
     (adaptiveRes?.streak || 0) >= 4 ? 'starry' : 'cheering',
     adaptiveRes?.encouragementMessage || 'Super effective thinking, Trainer!'
   );
-  ctx.rotomPane?.updateMetrics?.({
-    streak: adaptiveRes?.streak || 1,
-    consecutiveMisses: 0,
-    shinyRollBonus: adaptiveRes?.shinyRollBonus || 0,
-    chargePercent: stateSession.profile?.evolutionMeter || 0,
-    triggerCriticalChallenge: Boolean(adaptiveRes?.triggerCriticalChallenge),
-  });
-  ctx.rotomPane?.render?.(stateSession.profile);
+  ctx.rotomPane?.updateMetrics?.(buildRotomMetrics(stateSession.profile, adaptiveRes));
 
-  render();
+  // Patch HUD in place, then fire VFX on the still-mounted sprites.
+  patchArena();
+  patchStatus();
   triggerVisualAttack(buddyType, moveKey, isCrit ? `CRIT -${damage}!` : `-${damage} HP`, isCrit);
   const arenaEl = getArenaEl();
   if (arenaEl) {
     ctx.vfx?.spawnFloatingText?.(arenaEl, `+${xpGain} XP  +${coinGain}c`, 'xp');
   }
+  showBlitzBonus(blitzBonus);
 
   trackTimeout(() => {
     if (!stateSession) return;
@@ -1413,11 +1326,11 @@ function handleWildCorrect(problem, hintsUsed, buddyType, hadBlitzBonus) {
     stateSession.awaitingAnswer = false;
     stateSession.animating = false;
     stateSession.typedInput = '';
-    render();
-  }, 850);
+    render({ keepArena: true });
+  }, 1000);
 }
 
-function handleGymCorrect(problem, hintsUsed, buddyType, hadBlitzBonus) {
+function handleGymCorrect(problem, hintsUsed, buddyType, blitzBonus) {
   const phaseIdx = stateSession.phaseIdx;
   const phase = GYM_PHASES[phaseIdx];
   const nextStep = stateSession.phaseStep + 1;
@@ -1426,7 +1339,7 @@ function handleGymCorrect(problem, hintsUsed, buddyType, hadBlitzBonus) {
 
   const xpGain = phase.xpPerHit + (isFinalPhaseVictory ? 35 : 0);
   const meterGain = phase.meterPerHit + (isFinalPhaseVictory ? 20 : 0);
-  const coinGain = phase.coinsPerHit + (hadBlitzBonus ? 2 : 0) + (isFinalPhaseVictory ? 40 : 0);
+  const coinGain = phase.coinsPerHit + (isFinalPhaseVictory ? 40 : 0);
   const stardustGain = phase.stardustPerHit + (isFinalPhaseVictory ? 25 : 0);
 
   let adaptiveRes = null;
@@ -1520,17 +1433,12 @@ function handleGymCorrect(problem, hintsUsed, buddyType, hadBlitzBonus) {
       ? stateSession.gymLeader.victoryQuote
       : adaptiveRes?.encouragementMessage || 'Brilliant Gym Battle tactics!'
   );
-  ctx.rotomPane?.updateMetrics?.({
-    streak: adaptiveRes?.streak || 1,
-    consecutiveMisses: 0,
-    shinyRollBonus: adaptiveRes?.shinyRollBonus || 0,
-    chargePercent: stateSession.profile?.evolutionMeter || 0,
-    triggerCriticalChallenge: Boolean(adaptiveRes?.triggerCriticalChallenge),
-  });
-  ctx.rotomPane?.render?.(stateSession.profile);
+  ctx.rotomPane?.updateMetrics?.(buildRotomMetrics(stateSession.profile, adaptiveRes));
 
-  render();
+  patchArena();
+  patchStatus();
   triggerVisualAttack(buddyType, phaseIdx === 2 ? 'charge' : 'power', isFinalPhaseVictory ? 'FINISHER!' : `HIT!`, phaseIdx === 2);
+  showBlitzBonus(blitzBonus);
 
   if (isFinalPhaseVictory) {
     stateSession.gymWon = true;
@@ -1546,10 +1454,10 @@ function handleGymCorrect(problem, hintsUsed, buddyType, hadBlitzBonus) {
       if (!stateSession) return;
       stateSession.animating = false;
       ctx.audio?.playBadgeFanfare?.();
+      render({ keepArena: true });
       const arenaEl = getArenaEl();
       if (arenaEl) ctx.vfx?.burstConfetti?.(arenaEl);
       ctx.shell?.showToast?.(`Earned ${stateSession.gymLeader.badgeName} + Mystery Egg!`, 'success');
-      render();
     }, 650);
     return;
   }
@@ -1581,9 +1489,10 @@ function handleGymCorrect(problem, hintsUsed, buddyType, hadBlitzBonus) {
     stateSession.nudgedChoices = new Set();
     stateSession.hintsOpenedAtStart = 0;
     syncRotomToProblem(stateSession.activeProblem);
-    render();
-    startSpeedBlitzIfEnabled(stateSession.profile);
-  }, 850);
+    // A new Gym ace needs a fresh sprite; otherwise keep the arena mounted.
+    render({ keepArena: !phaseCompleted });
+    onNewProblem(stateSession.activeProblem);
+  }, 1000);
 }
 
 function renderHpPercent(hp, maxHp) {
@@ -1601,65 +1510,65 @@ function renderArenaMarkup() {
   const isCatchReady = !s.isGym && s.wildHp <= Math.ceil(s.wildMaxHp * 0.35);
 
   return `
-    <div class="pm-arena" aria-live="polite">
-      <div class="pm-arena-bg"></div>
-      <div class="pm-arena-grid">
-        <div class="pm-fighter is-buddy">
-          <div class="pm-hud-card">
-            <div class="pm-hud-top">
-              <div class="pm-hud-name">
+    <div class="pm-battle-arena" aria-live="polite">
+      <div class="pm-battle-arena-bg"></div>
+      <div class="pm-battle-arena-grid">
+        <div class="pm-battle-fighter is-buddy">
+          <div class="pm-battle-hud-card">
+            <div class="pm-battle-hud-top">
+              <div class="pm-battle-hud-name">
                 <span>${escapeHtml(s.buddyPokemon.name)}</span>
-                <span class="pm-type-badge" style="background:${getTypeColor(buddyType)}">${escapeHtml(buddyType)}</span>
+                <span class="pm-battle-type-badge" style="background:${getTypeColor(buddyType)}">${escapeHtml(buddyType)}</span>
               </div>
-              <span class="pm-num" style="font-weight:800;font-size:0.82rem;color:#334155;">Lv.${s.profile?.buddyLevel || 1}</span>
+              <span class="pm-battle-num" style="font-weight:800;font-size:0.82rem;color:#334155;">Lv.${s.profile?.buddyLevel || 1}</span>
             </div>
-            <div class="pm-hp-row">
+            <div class="pm-battle-hp-row">
               <span>Buddy HP</span>
-              <span class="pm-num">${s.buddyHp} / ${s.buddyMaxHp}</span>
+              <span class="pm-battle-num" data-hp-text="buddy">${s.buddyHp} / ${s.buddyMaxHp}</span>
             </div>
-            <div class="pm-hp-track">
-              <div class="pm-hp-fill ${buddyHpInfo.cls}" style="width:${buddyHpInfo.pct}%"></div>
+            <div class="pm-battle-hp-track">
+              <div class="pm-battle-hp-fill ${buddyHpInfo.cls}" data-hp-fill="buddy" style="width:${buddyHpInfo.pct}%"></div>
             </div>
           </div>
-          <div class="pm-sprite-stage">
-            <div class="pm-platform-shadow"></div>
-            <div class="pm-sprite-wrap" data-slot="buddy"></div>
+          <div class="pm-battle-sprite-stage">
+            <div class="pm-battle-platform-shadow"></div>
+            <div class="pm-battle-sprite-wrap" data-slot="buddy"></div>
           </div>
         </div>
 
-        <div class="pm-fighter is-opponent">
-          <div class="pm-hud-card">
-            <div class="pm-hud-top">
-              <div class="pm-hud-name">
+        <div class="pm-battle-fighter is-opponent">
+          <div class="pm-battle-hud-card">
+            <div class="pm-battle-hud-top">
+              <div class="pm-battle-hud-name">
                 <span>${escapeHtml(s.wildPokemon.name)}</span>
-                ${s.isShiny ? '<span class="pm-shiny-tag">✨ SHINY</span>' : ''}
-                <span class="pm-type-badge" style="background:${getTypeColor(wildType)}">${escapeHtml(wildType)}</span>
+                ${s.isShiny ? '<span class="pm-battle-shiny-tag">✨ SHINY</span>' : ''}
+                <span class="pm-battle-type-badge" style="background:${getTypeColor(wildType)}">${escapeHtml(wildType)}</span>
               </div>
               <span style="font-weight:800;font-size:0.78rem;color:#475569;">${s.isGym ? 'Gym Ace' : 'Wild'}</span>
             </div>
-            <div class="pm-hp-row">
+            <div class="pm-battle-hp-row">
               <span>${s.isGym ? 'Phase HP' : 'Wild HP'}</span>
-              <span class="pm-num">${s.wildHp} / ${s.wildMaxHp}</span>
+              <span class="pm-battle-num" data-hp-text="wild">${s.wildHp} / ${s.wildMaxHp}</span>
             </div>
-            <div class="pm-hp-track">
-              <div class="pm-hp-fill ${wildHpInfo.cls}" style="width:${wildHpInfo.pct}%"></div>
+            <div class="pm-battle-hp-track">
+              <div class="pm-battle-hp-fill ${wildHpInfo.cls}" data-hp-fill="wild" style="width:${wildHpInfo.pct}%"></div>
             </div>
-            ${isCatchReady ? '<div class="pm-catch-ready-pill">Weakened! Ready for Poké Ball!</div>' : ''}
+            <div data-catch-pill>${isCatchReady ? '<div class="pm-battle-catch-ready-pill">Weakened! Ready for Poké Ball!</div>' : ''}</div>
           </div>
-          <div class="pm-sprite-stage">
-            <div class="pm-platform-shadow"></div>
-            <div class="pm-sprite-wrap" data-slot="wild"></div>
+          <div class="pm-battle-sprite-stage">
+            <div class="pm-battle-platform-shadow"></div>
+            <div class="pm-battle-sprite-wrap" data-slot="wild"></div>
           </div>
         </div>
       </div>
 
-      <div class="pm-impact-bar-wrap">
-        <div class="pm-impact-head">
-          <span>${escapeHtml(s.impactLabel)}</span>
-          <span class="pm-num">${s.impactPercent}%</span>
+      <div class="pm-battle-impact-bar-wrap">
+        <div class="pm-battle-impact-head">
+          <span data-impact-label>${escapeHtml(s.impactLabel)}</span>
+          <span class="pm-battle-num" data-impact-pct>${s.impactPercent}%</span>
         </div>
-        <div class="pm-impact-track">
-          <div class="pm-impact-fill" style="width:${s.impactPercent}%"></div>
+        <div class="pm-battle-impact-track">
+          <div class="pm-battle-impact-fill" data-impact-fill style="width:${s.impactPercent}%"></div>
         </div>
       </div>
     </div>
@@ -1674,22 +1583,22 @@ function renderMoveCardsMarkup() {
   const keys = ['quick', 'power', 'charge'];
 
   return `
-    <div class="pm-moves-grid">
+    <div class="pm-battle-moves-grid">
       ${keys.map((key) => {
         const meta = MOVE_META[key];
         const moveName = moveNames[key] || meta.label;
         const estDmg = Math.max(12, Math.round(s.wildMaxHp * meta.dmgRatio));
         const isCritHighlight = key === 'charge' && s.adaptiveConfig?.criticalChallenge;
         return `
-          <button type="button" class="pm-move-card ${isCritHighlight ? 'is-charge-crit' : ''}" data-move-key="${key}">
-            <div class="pm-move-meta">
-              <span class="pm-type-badge" style="background:${buddyColor}">${escapeHtml(buddyType)} • ${meta.tag}</span>
-              <span class="pm-num">[${meta.keyHint}]</span>
+          <button type="button" class="pm-battle-move-card ${isCritHighlight ? 'is-charge-crit' : ''}" data-move-key="${key}">
+            <div class="pm-battle-move-meta">
+              <span class="pm-battle-type-badge" style="background:${buddyColor}">${escapeHtml(buddyType)} • ${meta.tag}</span>
+              <span class="pm-battle-num">[${meta.keyHint}]</span>
             </div>
-            <div class="pm-move-name">${escapeHtml(moveName)}</div>
-            <div class="pm-move-meta">
-              <span class="pm-num">~${estDmg} DMG</span>
-              <span class="pm-num">+${meta.xp} XP • +${meta.coins}c</span>
+            <div class="pm-battle-move-name">${escapeHtml(moveName)}</div>
+            <div class="pm-battle-move-meta">
+              <span class="pm-battle-num">~${estDmg} DMG</span>
+              <span class="pm-battle-num">+${meta.xp} XP • +${meta.coins}c</span>
             </div>
           </button>
         `;
@@ -1702,8 +1611,7 @@ function renderProblemDeckMarkup() {
   const s = stateSession;
   const p = s.activeProblem;
   const isCmp = p.format === 'comparison';
-  const isFraction = p.format === 'fraction';
-  const showSpeedBlitz = Boolean(s.profile?.settings?.speedBlitz && s.blitzRemainingMs > 0);
+  const isFraction = isFractionProblem(p);
   const moveBadge = s.isGym
     ? GYM_PHASES[s.phaseIdx].label
     : `${s.buddyPokemon?.moveNames?.[s.selectedMoveKey] || 'Move'} (${MOVE_META[s.selectedMoveKey]?.tag || 'Math'})`;
@@ -1714,74 +1622,61 @@ function renderProblemDeckMarkup() {
 
   const choicesHtml = (p.choices || []).map((choice) => {
     const valStr = String(choice);
-    const nudged = s.nudgedChoices.has(valStr) ? 'is-nudged' : '';
-    return `<button type="button" class="pm-choice-tile pm-num ${nudged}" data-choice-val="${escapeHtml(valStr)}">${escapeHtml(valStr)}</button>`;
+    const nudged = s.nudgedChoices.has(valStr) ? 'is-graze' : '';
+    return `<button type="button" class="pokenav-choice-tile pm-battle-num ${nudged}" data-choice-val="${escapeHtml(valStr)}">${escapeHtml(valStr)}</button>`;
   }).join('');
 
   const keypadHtml = isCmp
     ? `
-      <div class="pm-keypad">
+      <div class="pm-battle-keypad-help">
         <div style="font-size:0.84rem;font-weight:800;color:#475569;">Keyboard Shortcuts</div>
-        <div style="font-size:0.9rem;font-weight:700;color:#1E293B;">Press <strong>&lt;</strong>, <strong>=</strong>, or <strong>&gt;</strong> on your keyboard, or tap a symbol tile!</div>
+        <div>Press <strong>&lt;</strong>, <strong>=</strong>, or <strong>&gt;</strong> on your keyboard, or tap a symbol tile!</div>
       </div>
     `
     : `
-      <div class="pm-keypad" aria-label="Poké-Keypad">
-        <div class="pm-keypad-screen pm-num">${escapeHtml(s.typedInput || 'Enter answer…')}</div>
-        <div class="pm-keypad-grid">
-          ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => `<button type="button" class="pm-key-btn pm-num" data-key="${d}">${d}</button>`).join('')}
-          <button type="button" class="pm-key-btn is-action" data-key="clear">Clear</button>
-          <button type="button" class="pm-key-btn pm-num" data-key="0">0</button>
-          <button type="button" class="pm-key-btn is-action" data-key="back">⌫</button>
-        </div>
-        ${isFraction ? '<button type="button" class="pm-key-btn is-action" data-key="/">Slash ( / )</button>' : ''}
-        <button type="button" class="pm-btn-3d pm-btn-primary" data-key="attack" style="width:100%;">
+      <div class="pokenav-keypad pm-battle-keypad" aria-label="Poké-Keypad">
+        <div class="pokenav-keypad-display pm-battle-keypad-screen pm-battle-num">${escapeHtml(s.typedInput || 'Enter answer…')}</div>
+        ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => `<button type="button" class="pokenav-keypad-btn pm-battle-num" data-key="${d}">${d}</button>`).join('')}
+        <button type="button" class="pokenav-keypad-btn is-action" data-key="clear">Clear</button>
+        <button type="button" class="pokenav-keypad-btn pm-battle-num" data-key="0">0</button>
+        <button type="button" class="pokenav-keypad-btn is-action" data-key="back" aria-label="Backspace">⌫</button>
+        ${isFraction ? '<button type="button" class="pokenav-keypad-btn is-action pm-battle-keypad-wide" data-key="/">Fraction bar ( / )</button>' : ''}
+        <button type="button" class="btn-3d btn-primary pm-battle-keypad-wide" data-key="attack">
           Attack! ⚡
         </button>
       </div>
     `;
 
   return `
-    <div class="pm-problem-deck">
-      <div class="pm-problem-header">
+    <div class="pm-battle-problem-deck">
+      <div class="pm-battle-problem-header">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span class="pm-battle-route-pill">${escapeHtml(moveBadge)}</span>
-          <span class="pm-stat-chip">${escapeHtml(p.skillTag || p.operation)}</span>
+          <span class="pm-battle-stat-chip">${escapeHtml(formatSkillLabel(p))}</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <button type="button" class="pm-btn-3d" data-action="speak" style="min-height:42px;padding:6px 12px;font-size:0.85rem;">
+          <button type="button" class="btn-3d btn-sm" data-action="speak">
             🔊 Read Aloud
           </button>
           ${!s.isGym ? `
-            <button type="button" class="pm-btn-3d" data-action="back-moves" style="min-height:42px;padding:6px 12px;font-size:0.85rem;">
+            <button type="button" class="btn-3d btn-sm" data-action="back-moves">
               ← Switch Move
             </button>
           ` : ''}
         </div>
       </div>
 
-      ${showSpeedBlitz ? `
-        <div class="pm-blitz-wrap">
-          <div class="pm-blitz-label pm-num" style="font-size:0.78rem;font-weight:800;color:#B45309;">
-            Speed Blitz Bonus: ${Math.ceil(s.blitzRemainingMs / 1000)}s (+2 Coins)
-          </div>
-          <div class="pm-blitz-track">
-            <div class="pm-blitz-fill" style="width:${Math.round((s.blitzRemainingMs / SPEED_BLITZ_MS) * 100)}%"></div>
-          </div>
-        </div>
-      ` : ''}
-
       <div>
-        <p class="pm-problem-prompt">${storyHeader}${escapeHtml(p.promptText)}</p>
-        ${p.expression ? `<div class="pm-problem-expr pm-num">${escapeHtml(p.expression)}</div>` : ''}
+        <p class="pm-battle-problem-prompt">${storyHeader}${escapeHtml(p.promptText)}</p>
+        ${p.expression ? `<div class="pm-battle-problem-expr pm-battle-num">${escapeHtml(p.expression)}</div>` : ''}
       </div>
 
-      <div class="pm-solver-grid">
+      <div class="pm-battle-solver-grid">
         <div>
           <div style="font-size:0.8rem;font-weight:800;color:#64748B;margin-bottom:6px;">
             Tap a Choice Tile
           </div>
-          <div class="pm-choices-grid ${isCmp ? 'is-cmp' : ''}">
+          <div class="pokenav-choice-grid pm-battle-choices-grid ${isCmp ? 'is-cmp' : ''}">
             ${choicesHtml}
           </div>
         </div>
@@ -1798,9 +1693,9 @@ function renderGymVictoryMarkup() {
   const nextRoute = r.nextRouteId && ctx?.routesData?.getRouteById?.(r.nextRouteId);
 
   return `
-    <div class="pm-victory-card">
-      <div class="pm-victory-top">
-        <div class="pm-gym-crest">${getGymBadgeSvg(leader.badgeColor, leader.badgeSvgKey)}</div>
+    <div class="pm-battle-victory-card">
+      <div class="pm-battle-victory-top">
+        <div class="pm-battle-gym-crest">${getGymBadgeSvg(leader.badgeColor, leader.badgeSvgKey)}</div>
         <div>
           <div class="pm-battle-route-pill">GYM VICTORY!</div>
           <h3 style="margin:4px 0 2px;font-size:1.22rem;font-weight:900;">${escapeHtml(leader.badgeName)} Earned!</h3>
@@ -1809,22 +1704,22 @@ function renderGymVictoryMarkup() {
       </div>
 
       <div class="pm-battle-stats">
-        <span class="pm-stat-chip">🥚 Mystery Egg Received!</span>
-        <span class="pm-stat-chip">✨ Shiny Charm +${Math.round((r.shinyCharmBoost || 0.02) * 100)}%</span>
-        <span class="pm-stat-chip pm-num">+${r.coins || 40} Coins • +${r.stardust || 25} Stardust</span>
-        ${nextRoute ? `<span class="pm-stat-chip">🗺️ Unlocked: ${escapeHtml(nextRoute.name)}!</span>` : ''}
+        <span class="pm-battle-stat-chip">🥚 Mystery Egg Received!</span>
+        <span class="pm-battle-stat-chip">✨ Shiny Charm +${Math.round((r.shinyCharmBoost || 0.02) * 100)}%</span>
+        <span class="pm-battle-stat-chip pm-battle-num">+${r.coins || 40} Coins • +${r.stardust || 25} Stardust</span>
+        ${nextRoute ? `<span class="pm-battle-stat-chip">🗺️ Unlocked: ${escapeHtml(nextRoute.name)}!</span>` : ''}
       </div>
 
-      <div class="pm-victory-actions">
+      <div class="pm-battle-victory-actions">
         ${nextRoute ? `
-          <button type="button" class="pm-btn-3d pm-btn-emerald" data-action="next-route" data-route-id="${escapeHtml(nextRoute.id)}">
+          <button type="button" class="btn-3d btn-success" data-action="next-route" data-route-id="${escapeHtml(nextRoute.id)}">
             Explore ${escapeHtml(nextRoute.name)} →
           </button>
         ` : ''}
-        <button type="button" class="pm-btn-3d pm-btn-gold" data-action="go-camp">
+        <button type="button" class="btn-3d btn-gold" data-action="go-camp">
           Hatch Mystery Egg in Camp 🥚
         </button>
-        <button type="button" class="pm-btn-3d" data-action="rematch-gym">
+        <button type="button" class="btn-3d" data-action="rematch-gym">
           Rematch Gym Leader
         </button>
       </div>
@@ -1832,7 +1727,16 @@ function renderGymVictoryMarkup() {
   `;
 }
 
-function render() {
+function setRegion(name, html) {
+  const el = container?.querySelector(`[data-battle-region="${name}"]`);
+  if (el) el.innerHTML = html;
+}
+
+/**
+ * Full render rebuilds the shell (and reloads sprites/backdrop). Pass keepArena to
+ * refresh only the banner/controls regions and patch the arena in place.
+ */
+function render({ keepArena = false } = {}) {
   if (!mounted || !container || !stateSession) return;
   const s = stateSession;
   const route = s.route;
@@ -1846,10 +1750,10 @@ function render() {
   if (s.isGym) {
     const leader = s.gymLeader;
     topBannerHtml = `
-      <div class="pm-gym-header">
-        <div class="pm-gym-top">
-          <div class="pm-gym-leader-card">
-            <div class="pm-gym-crest">${getGymBadgeSvg(leader.badgeColor, leader.badgeSvgKey)}</div>
+      <div class="pm-battle-gym-header">
+        <div class="pm-battle-gym-top">
+          <div class="pm-battle-gym-leader-card">
+            <div class="pm-battle-gym-crest">${getGymBadgeSvg(leader.badgeColor, leader.badgeSvgKey)}</div>
             <div>
               <div class="pm-battle-route-pill">GYM BOSS GAUNTLET • ${escapeHtml(leader.badgeName)}</div>
               <h2 class="pm-battle-route-name">${escapeHtml(leader.name)}</h2>
@@ -1857,14 +1761,14 @@ function render() {
             </div>
           </div>
           <div class="pm-battle-stats">
-            <span class="pm-stat-chip ${isCritReady ? 'is-crit' : ''}">🔥 Streak ${streak}</span>
-            <button type="button" class="pm-btn-3d" data-action="back-wild" style="min-height:42px;padding:6px 12px;font-size:0.84rem;">
+            <span class="pm-battle-stat-chip ${isCritReady ? 'is-crit' : ''}">🔥 Streak ${streak}</span>
+            <button type="button" class="btn-3d btn-sm" data-action="back-wild">
               ← Wild Route
             </button>
           </div>
         </div>
-        <p class="pm-gym-quote">"${escapeHtml(s.gymWon ? leader.victoryQuote : leader.introQuote)}"</p>
-        <div class="pm-gym-phases">
+        <p class="pm-battle-gym-quote">"${escapeHtml(s.gymWon ? leader.victoryQuote : leader.introQuote)}"</p>
+        <div class="pm-battle-gym-phases">
           ${GYM_PHASES.map((ph, idx) => {
             const cls = s.gymWon || idx < s.phaseIdx ? 'is-done' : idx === s.phaseIdx ? 'is-active' : '';
             const stepProgress = s.gymWon || idx < s.phaseIdx
@@ -1872,7 +1776,7 @@ function render() {
               : idx === s.phaseIdx
                 ? `${s.phaseStep}/${ph.stepsRequired}`
                 : `0/${ph.stepsRequired}`;
-            return `<div class="pm-phase-step ${cls}"><span>${escapeHtml(ph.label)}</span><span class="pm-num">${stepProgress}</span></div>`;
+            return `<div class="pm-battle-phase-step ${cls}"><span>${escapeHtml(ph.label)}</span><span class="pm-battle-num">${stepProgress}</span></div>`;
           }).join('')}
         </div>
       </div>
@@ -1888,9 +1792,9 @@ function render() {
           <p class="pm-battle-route-sub">${escapeHtml(route.subtitle)}</p>
         </div>
         <div class="pm-battle-stats">
-          <span class="pm-stat-chip" title="Route Stars">${starsText}</span>
-          <span class="pm-stat-chip pm-num">Solved: ${rp.solvedCount || 0}</span>
-          <span class="pm-stat-chip ${isCritReady ? 'is-crit' : ''}">
+          <span class="pm-battle-stat-chip" title="Route Stars">${starsText}</span>
+          <span class="pm-battle-stat-chip pm-battle-num">Solved: ${rp.solvedCount || 0}</span>
+          <span class="pm-battle-stat-chip ${isCritReady ? 'is-crit' : ''}">
             ${isCritReady ? '⚡ CRITICAL READY' : `🔥 Streak ${streak}`}
           </span>
         </div>
@@ -1899,7 +1803,7 @@ function render() {
   }
 
   const catchCtaHtml = isCatchReady ? `
-    <div class="pm-catch-cta-bar">
+    <div class="pm-battle-catch-cta-bar">
       <div>
         <div style="font-weight:900;font-size:1rem;color:#991B1B;">
           ${s.wildHp <= 1 ? `${escapeHtml(s.wildPokemon.name)} hung on with 1 HP!` : `${escapeHtml(s.wildPokemon.name)} is weakened!`}
@@ -1909,23 +1813,16 @@ function render() {
         </div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button type="button" class="pm-btn-3d pm-btn-primary pm-btn-glow" data-action="throw-pokeball">
+        <button type="button" class="btn-3d btn-primary pm-battle-btn-glow" data-action="throw-pokeball">
           Throw Poké Ball! →
         </button>
-        <button type="button" class="pm-btn-3d" data-action="next-encounter">
+        <button type="button" class="btn-3d" data-action="next-encounter">
           Next Encounter
         </button>
       </div>
     </div>
   ` : '';
 
-  const statusFeedbackHtml = s.statusMessage ? `
-    <div class="pm-feedback-banner ${s.statusVariant === 'nudge' ? 'is-nudge' : s.statusVariant === 'success' ? 'is-success' : ''}"
-         style="${s.statusVariant === 'info' ? 'background:#FFFFFF;border:2px solid #E2D5BE;color:#334155;' : ''}">
-      <span>${s.statusVariant === 'nudge' ? '💡' : s.statusVariant === 'success' ? '✨' : '🧭'}</span>
-      <span>${escapeHtml(s.statusMessage)}</span>
-    </div>
-  ` : '';
 
   let controlsHtml = '';
   if (s.isGym && s.gymWon) {
@@ -1938,10 +1835,10 @@ function render() {
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <div style="font-weight:900;font-size:1rem;">Choose Your Buddy's Tactical Move</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="pm-btn-3d" data-action="next-encounter" style="min-height:42px;padding:6px 12px;font-size:0.85rem;">
+            <button type="button" class="btn-3d btn-sm" data-action="next-encounter">
               🔄 Next Encounter
             </button>
-            <button type="button" class="pm-btn-3d pm-btn-gold" data-action="challenge-gym" style="min-height:42px;padding:6px 12px;font-size:0.85rem;">
+            <button type="button" class="btn-3d btn-sm btn-gold" data-action="challenge-gym">
               🏆 Challenge Gym Leader
             </button>
           </div>
@@ -1951,18 +1848,28 @@ function render() {
     `;
   }
 
+  const existingRoot = container.querySelector('.pm-battle-root');
+  if (keepArena && existingRoot && existingRoot.querySelector('[data-battle-region="arena"]')) {
+    setRegion('banner', topBannerHtml);
+    setRegion('catch', catchCtaHtml);
+    setRegion('controls', controlsHtml);
+    patchStatus();
+    patchArena();
+    return;
+  }
+
   container.innerHTML = `
     <div class="pm-battle-root">
-      ${topBannerHtml}
-      ${renderArenaMarkup()}
-      ${catchCtaHtml}
-      ${statusFeedbackHtml}
-      ${controlsHtml}
+      <div class="pm-battle-region" data-battle-region="banner">${topBannerHtml}</div>
+      <div class="pm-battle-region" data-battle-region="arena">${renderArenaMarkup()}</div>
+      <div class="pm-battle-region" data-battle-region="catch">${catchCtaHtml}</div>
+      <div class="${statusClassName(s.statusVariant)}" data-battle-region="status" aria-live="polite">${statusInnerHtml(s)}</div>
+      <div class="pm-battle-region" data-battle-region="controls">${controlsHtml}</div>
     </div>
   `;
 
   // Mount parallax biome backdrop and live Pokémon visuals
-  const arenaBg = container.querySelector('.pm-arena-bg');
+  const arenaBg = container.querySelector('.pm-battle-arena-bg');
   if (arenaBg) {
     ctx.vfx?.mountBiomeBackdrop?.(arenaBg, route.biomeKey);
   }
@@ -1979,124 +1886,131 @@ function render() {
     size: 122,
     animate: true,
   });
-
-  bindContainerEvents();
 }
 
-function bindContainerEvents() {
+function nudgeEmptyInput(message) {
+  if (!stateSession) return;
+  ctx.audio?.playGentleNudge?.();
+  stateSession.statusMessage = message;
+  stateSession.statusVariant = 'nudge';
+  patchStatus();
+  replayClass(container?.querySelector('.pm-battle-keypad-screen'), 'pokenav-graze');
+}
+
+function typeKeypadChar(ch) {
+  const s = stateSession;
+  if (!s) return false;
+  if (ch === '/') {
+    if (!isFractionProblem(s.activeProblem) || !s.typedInput || s.typedInput.includes('/')) return false;
+  }
+  if (s.typedInput.length >= 8) return false;
+  s.typedInput += ch;
+  updateKeypadScreen();
+  return true;
+}
+
+function onContainerClick(e) {
   if (!container || !stateSession) return;
+  const target = e.target?.closest?.('[data-move-key], [data-choice-val], [data-key], [data-action]');
+  if (!target || !container.contains(target)) return;
 
-  container.querySelectorAll('[data-move-key]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const key = btn.getAttribute('data-move-key');
-      if (key) selectWildMove(key);
-    });
-  });
+  const moveKey = target.getAttribute('data-move-key');
+  if (moveKey) {
+    selectWildMove(moveKey);
+    return;
+  }
 
-  container.querySelectorAll('[data-choice-val]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const val = btn.getAttribute('data-choice-val');
-      if (val !== null) submitAnswer(val);
-    });
-  });
+  const choiceVal = target.getAttribute('data-choice-val');
+  if (choiceVal !== null) {
+    submitAnswer(choiceVal);
+    return;
+  }
 
-  container.querySelectorAll('[data-key]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (!stateSession?.awaitingAnswer || stateSession.animating) return;
-      ctx.audio?.unlockAudio?.();
-      const k = btn.getAttribute('data-key');
-      if (k === 'clear') {
-        ctx.audio?.playClick?.('cancel');
-        stateSession.typedInput = '';
-        updateKeypadScreen();
-      } else if (k === 'back') {
-        ctx.audio?.playClick?.('tap');
-        stateSession.typedInput = stateSession.typedInput.slice(0, -1);
-        updateKeypadScreen();
-      } else if (k === 'attack') {
-        if (stateSession.typedInput.length > 0) {
-          submitAnswer(stateSession.typedInput);
-        } else {
-          ctx.audio?.playGentleNudge?.();
-          stateSession.statusMessage = 'Enter digits on the Poké-Keypad or tap a Choice Tile!';
-          stateSession.statusVariant = 'nudge';
-          render();
-        }
-      } else if (k) {
-        ctx.audio?.playClick?.('tap');
-        if (stateSession.typedInput.length < 8) {
-          stateSession.typedInput += k;
-          updateKeypadScreen();
-        }
+  const k = target.getAttribute('data-key');
+  if (k) {
+    if (!stateSession.awaitingAnswer || stateSession.animating) return;
+    ctx.audio?.unlockAudio?.();
+    if (k === 'clear') {
+      ctx.audio?.playClick?.('cancel');
+      stateSession.typedInput = '';
+      updateKeypadScreen();
+    } else if (k === 'back') {
+      ctx.audio?.playClick?.('tap');
+      stateSession.typedInput = stateSession.typedInput.slice(0, -1);
+      updateKeypadScreen();
+    } else if (k === 'attack') {
+      if (stateSession.typedInput.length > 0) {
+        submitAnswer(stateSession.typedInput);
+      } else {
+        nudgeEmptyInput('Enter digits on the Poké-Keypad or tap a Choice Tile!');
       }
-    });
-  });
+    } else {
+      ctx.audio?.playClick?.('tap');
+      typeKeypadChar(k);
+    }
+    return;
+  }
 
-  container.querySelector('[data-action="speak"]')?.addEventListener('click', () => {
-    const p = stateSession?.activeProblem;
-    if (p) ctx.audio?.speakText?.(p.spokenPrompt || p.promptText, true);
-  });
-
-  container.querySelector('[data-action="back-moves"]')?.addEventListener('click', () => {
-    if (!stateSession || stateSession.animating) return;
-    ctx.audio?.playClick?.('tap');
-    stopSpeedBlitzTimer();
-    stateSession.selectedMoveKey = null;
-    stateSession.activeProblem = null;
-    stateSession.awaitingAnswer = false;
-    stateSession.typedInput = '';
-    render();
-  });
-
-  container.querySelector('[data-action="throw-pokeball"]')?.addEventListener('click', () => {
-    if (!stateSession) return;
-    ctx.audio?.playClick?.('select');
-    ctx.onNavigate?.('catch', {
-      routeId: stateSession.route.id,
-      encounterPokemonId: stateSession.wildPokemon.id,
-      shiny: stateSession.isShiny,
-      weakened: true,
-    });
-  });
-
-  container.querySelector('[data-action="next-encounter"]')?.addEventListener('click', () => {
-    ctx.audio?.playClick?.('tap');
-    startWildSession(true);
-    render();
-  });
-
-  container.querySelector('[data-action="challenge-gym"]')?.addEventListener('click', () => {
-    ctx.audio?.playClick?.('select');
-    ctx.onNavigate?.('gym', { mode: 'gym', routeId: stateSession.route.id });
-  });
-
-  container.querySelector('[data-action="back-wild"]')?.addEventListener('click', () => {
-    ctx.audio?.playClick?.('tap');
-    ctx.onNavigate?.('battle', { mode: 'battle', routeId: stateSession.route.id });
-  });
-
-  container.querySelector('[data-action="rematch-gym"]')?.addEventListener('click', () => {
-    ctx.audio?.playClick?.('select');
-    startGymSession();
-    syncRotomToProblem(stateSession.activeProblem);
-    render();
-    startSpeedBlitzIfEnabled(stateSession.profile);
-  });
-
-  container.querySelector('[data-action="next-route"]')?.addEventListener('click', (e) => {
-    const nextId = e.currentTarget.getAttribute('data-route-id');
-    ctx.audio?.playClick?.('select');
-    ctx.onNavigate?.('battle', { mode: 'battle', routeId: nextId });
-  });
-
-  container.querySelector('[data-action="go-camp"]')?.addEventListener('click', () => {
-    ctx.audio?.playClick?.('select');
-    ctx.onNavigate?.('camp', { tab: 'camp' });
-  });
+  const action = target.getAttribute('data-action');
+  switch (action) {
+    case 'speak': {
+      const p = stateSession.activeProblem;
+      if (p) ctx.audio?.speakText?.(p.spokenPrompt || p.promptText, true);
+      break;
+    }
+    case 'back-moves':
+      if (stateSession.animating) return;
+      ctx.audio?.playClick?.('tap');
+      stateSession.selectedMoveKey = null;
+      stateSession.activeProblem = null;
+      stateSession.awaitingAnswer = false;
+      stateSession.typedInput = '';
+      render({ keepArena: true });
+      break;
+    case 'throw-pokeball':
+      ctx.audio?.playClick?.('select');
+      ctx.onNavigate?.('catch', {
+        routeId: stateSession.route.id,
+        encounterPokemonId: stateSession.wildPokemon.id,
+        shiny: stateSession.isShiny,
+        weakened: true,
+      });
+      break;
+    case 'next-encounter':
+      ctx.audio?.playClick?.('tap');
+      startWildSession(true);
+      render();
+      break;
+    case 'challenge-gym':
+      ctx.audio?.playClick?.('select');
+      ctx.onNavigate?.('gym', { mode: 'gym', routeId: stateSession.route.id });
+      break;
+    case 'back-wild':
+      ctx.audio?.playClick?.('tap');
+      ctx.onNavigate?.('battle', { mode: 'battle', routeId: stateSession.route.id });
+      break;
+    case 'rematch-gym':
+      ctx.audio?.playClick?.('select');
+      startGymSession();
+      syncRotomToProblem(stateSession.activeProblem);
+      render();
+      onNewProblem(stateSession.activeProblem);
+      break;
+    case 'next-route':
+      ctx.audio?.playClick?.('select');
+      ctx.onNavigate?.('battle', { mode: 'battle', routeId: target.getAttribute('data-route-id') });
+      break;
+    case 'go-camp':
+      ctx.audio?.playClick?.('select');
+      ctx.onNavigate?.('camp', { tab: 'camp' });
+      break;
+    default:
+      break;
+  }
 }
 
 function updateKeypadScreen() {
-  const screen = container?.querySelector('.pm-keypad-screen');
+  const screen = container?.querySelector('.pm-battle-keypad-screen');
   if (screen && stateSession) {
     screen.textContent = stateSession.typedInput || 'Enter answer…';
   }
@@ -2112,13 +2026,15 @@ export function mount(containerEl, context) {
   ctx = context;
 
   injectBattleStyles();
+  clickHandler = onContainerClick;
+  container.addEventListener('click', clickHandler);
 
   const isGym = ctx.modeParams?.mode === 'gym';
   if (isGym) {
     startGymSession();
     syncRotomToProblem(stateSession.activeProblem);
     render();
-    startSpeedBlitzIfEnabled(stateSession.profile);
+    onNewProblem(stateSession.activeProblem);
   } else {
     startWildSession(false);
     const defaultMove = stateSession.moveSet?.power || stateSession.moveSet?.quick;
@@ -2136,8 +2052,11 @@ export function unmount() {
   sessionToken += 1;
   clearAllTimers();
   if (container) {
+    if (clickHandler) container.removeEventListener('click', clickHandler);
     container.innerHTML = '';
   }
+  clickHandler = null;
+  removeBattleStyles();
   container = null;
   ctx = null;
   stateSession = null;
@@ -2185,13 +2104,18 @@ export function handleKey(event) {
     return false;
   }
 
-  if (key >= '0' && key <= '9') {
+  if (key >= '0' && key <= '9' && key.length === 1) {
     ctx?.audio?.unlockAudio?.();
     ctx?.audio?.playClick?.('tap');
-    if (stateSession.typedInput.length < 8) {
-      stateSession.typedInput += key;
-      updateKeypadScreen();
-    }
+    typeKeypadChar(key);
+    return true;
+  }
+
+  if (key === '/' && isFractionProblem(problem)) {
+    event.preventDefault?.();
+    ctx?.audio?.unlockAudio?.();
+    if (typeKeypadChar('/')) ctx?.audio?.playClick?.('tap');
+    else ctx?.audio?.playGentleNudge?.();
     return true;
   }
 
@@ -2206,10 +2130,7 @@ export function handleKey(event) {
     if (stateSession.typedInput.length > 0) {
       submitAnswer(stateSession.typedInput);
     } else {
-      ctx?.audio?.playGentleNudge?.();
-      stateSession.statusMessage = 'Type digits first or click one of the Choice Tiles!';
-      stateSession.statusVariant = 'nudge';
-      render();
+      nudgeEmptyInput('Type digits first or click one of the Choice Tiles!');
     }
     return true;
   }

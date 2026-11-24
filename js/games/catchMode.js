@@ -105,7 +105,7 @@ function injectCatchStyles() {
       color: var(--text-main, #1E293B);
       font-family: var(--font-sans, "Nunito", "Quicksand", "Segoe UI", system-ui, sans-serif);
     }
-    .pm-catch-root .pm-num {
+    .pm-catch-root .pm-catch-num {
       font-variant-numeric: tabular-nums;
     }
     .pm-catch-header {
@@ -171,7 +171,7 @@ function injectCatchStyles() {
       gap: 14px;
       flex-wrap: wrap;
     }
-    .pm-encounter-card {
+    .pm-catch-encounter-card {
       background: rgba(255, 255, 255, 0.93);
       border: 2px solid #E2D5BE;
       border-radius: 16px;
@@ -179,7 +179,7 @@ function injectCatchStyles() {
       min-width: 210px;
       box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
     }
-    .pm-encounter-visual-box {
+    .pm-catch-encounter-visual-box {
       position: relative;
       z-index: 2;
       min-height: 145px;
@@ -188,17 +188,17 @@ function injectCatchStyles() {
       justify-content: center;
       flex: 1;
     }
-    .pm-wild-target {
+    .pm-catch-wild-target {
       transition: transform 280ms ease, opacity 260ms ease;
     }
-    .pm-wild-target.is-absorbed {
+    .pm-catch-wild-target.is-absorbed {
       transform: scale(0.15) translateY(-14px);
       opacity: 0;
     }
-    .pm-wild-target.is-hopped {
+    .pm-catch-wild-target.is-hopped {
       animation: pm-catch-hop 360ms ease;
     }
-    .pm-capture-ball-overlay {
+    .pm-catch-capture-ball-overlay {
       position: absolute;
       inset: 0;
       display: flex;
@@ -208,29 +208,29 @@ function injectCatchStyles() {
       pointer-events: none;
       z-index: 5;
     }
-    .pm-thrown-ball {
+    .pm-catch-thrown-ball {
       width: 64px;
       height: 64px;
       transform-origin: 50% 80%;
     }
-    .pm-thrown-ball.is-launching {
-      animation: pm-ball-launch 520ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    .pm-catch-thrown-ball.is-launching {
+      animation: pm-catch-ball-launch 520ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
     }
-    .pm-thrown-ball.is-wobble-0,
-    .pm-thrown-ball.is-wobble-1,
-    .pm-thrown-ball.is-wobble-2 {
-      animation: pm-ball-wobble 420ms ease-in-out;
+    .pm-catch-thrown-ball.is-wobble-0,
+    .pm-catch-thrown-ball.is-wobble-1,
+    .pm-catch-thrown-ball.is-wobble-2 {
+      animation: pm-catch-ball-wobble 420ms ease-in-out;
     }
-    .pm-thrown-ball.is-caught {
+    .pm-catch-thrown-ball.is-caught {
       filter: drop-shadow(0 0 14px rgba(250, 204, 21, 0.9));
       transform: scale(1.08);
     }
-    .pm-ball-tray {
+    .pm-catch-ball-tray {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
       gap: 8px;
     }
-    .pm-ball-btn {
+    .pm-catch-ball-btn {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -245,31 +245,31 @@ function injectCatchStyles() {
       text-align: left;
       color: #0F172A;
     }
-    .pm-ball-btn.is-selected {
+    .pm-catch-ball-btn.is-selected {
       border-color: #E3350D;
       background: #FFF1F2;
       box-shadow: 0 4px 12px rgba(227, 53, 13, 0.14);
     }
-    .pm-ball-btn:disabled {
+    .pm-catch-ball-btn:disabled {
       opacity: 0.48;
       cursor: not-allowed;
     }
-    .pm-ball-icon {
+    .pm-catch-ball-icon {
       width: 34px;
       height: 34px;
       flex-shrink: 0;
     }
-    .pm-ball-icon svg {
+    .pm-catch-ball-icon svg {
       width: 100%;
       height: 100%;
       display: block;
     }
-    .pm-challenge-tabs {
+    .pm-catch-challenge-tabs {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
     }
-    .pm-tab-btn {
+    .pm-catch-tab-btn {
       min-height: 52px;
       padding: 8px 10px;
       border-radius: 14px;
@@ -286,12 +286,12 @@ function injectCatchStyles() {
       justify-content: center;
       gap: 6px;
     }
-    .pm-tab-btn.is-active {
+    .pm-catch-tab-btn.is-active {
       background: #EEF2FF;
       border-color: #3B4CCA;
       color: #1E1B4B;
     }
-    .pm-console-card {
+    .pm-catch-console-card {
       background: var(--bg-card, #FFFFFF);
       border: 2.5px solid var(--border-warm, #DFD3BC);
       border-radius: 20px;
@@ -301,21 +301,21 @@ function injectCatchStyles() {
       gap: 14px;
       box-shadow: 0 8px 22px rgba(30, 41, 59, 0.08);
     }
-    .pm-console-top {
+    .pm-catch-console-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
       flex-wrap: wrap;
     }
-    .pm-prompt-text {
+    .pm-catch-prompt-text {
       margin: 0;
       font-size: 1.2rem;
       font-weight: 900;
       color: #0F172A;
       line-height: 1.35;
     }
-    .pm-nl-wrap {
+    .pm-catch-nl-wrap {
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -324,7 +324,7 @@ function injectCatchStyles() {
       background: #F8FAFC;
       border: 2px solid #E2E8F0;
     }
-    .pm-nl-svg {
+    .pm-catch-nl-svg {
       width: 100%;
       height: auto;
       display: block;
@@ -332,26 +332,26 @@ function injectCatchStyles() {
       touch-action: none;
       user-select: none;
     }
-    .pm-nl-controls {
+    .pm-catch-nl-controls {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
     }
-    .pm-nl-slider {
+    .pm-catch-nl-slider {
       flex: 1;
       min-width: 180px;
       height: 36px;
       accent-color: #E3350D;
       cursor: pointer;
     }
-    .pm-tumblers-grid {
+    .pm-catch-tumblers-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
     }
-    .pm-tumbler-col {
+    .pm-catch-tumbler-col {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -361,7 +361,7 @@ function injectCatchStyles() {
       background: #FFF9F0;
       border: 2px solid #E2D5BE;
     }
-    .pm-tumbler-digit {
+    .pm-catch-tumbler-digit {
       width: 66px;
       height: 62px;
       border-radius: 14px;
@@ -373,24 +373,7 @@ function injectCatchStyles() {
       font-weight: 900;
       border: 2px solid #334155;
     }
-    .pm-dial-btn {
-      width: 100%;
-      min-height: 52px;
-      border-radius: 12px;
-      border: 2px solid #CBD5E1;
-      border-bottom-width: 4px;
-      background: #FFFFFF;
-      font-family: inherit;
-      font-size: 1.3rem;
-      font-weight: 900;
-      color: #1E293B;
-      cursor: pointer;
-    }
-    .pm-dial-btn:active {
-      transform: translateY(2px);
-      border-bottom-width: 2px;
-    }
-    .pm-scale-stage {
+    .pm-catch-scale-stage {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -400,93 +383,27 @@ function injectCatchStyles() {
       background: #F8FAFC;
       border: 2px solid #E2E8F0;
     }
-    .pm-cmp-buttons {
+    .pm-catch-cmp-buttons {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
       width: 100%;
     }
-    .pm-cmp-btn {
-      min-height: 62px;
-      border-radius: 16px;
-      border: 2.5px solid #CBD5E1;
-      border-bottom-width: 6px;
-      background: #FFFFFF;
-      font-family: inherit;
-      font-size: 1.45rem;
-      font-weight: 900;
-      color: #0F172A;
-      cursor: pointer;
-      display: flex;
+    .pm-catch-region {
+      display: contents;
+    }
+    .pm-catch-dial-btn {
+      width: 100%;
+      min-height: 52px;
+      font-size: 1.3rem;
+    }
+    .pm-catch-cmp-btn {
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      min-height: 62px;
+      font-size: 1.45rem;
       gap: 2px;
     }
-    .pm-cmp-btn:hover {
-      border-color: #3B4CCA;
-      background: #EEF2FF;
-    }
-    .pm-cmp-btn:active {
-      transform: translateY(2px);
-      border-bottom-width: 2px;
-    }
-    .pm-btn-3d {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      min-height: 52px;
-      padding: 10px 18px;
-      border-radius: 15px;
-      border: 2px solid #1E293B;
-      border-bottom-width: 5px;
-      font-family: inherit;
-      font-weight: 900;
-      font-size: 0.96rem;
-      cursor: pointer;
-      background: #FFFFFF;
-      color: #1E293B;
-    }
-    .pm-btn-3d:active {
-      transform: translateY(2px);
-      border-bottom-width: 2px;
-    }
-    .pm-btn-throw {
-      background: linear-gradient(180deg, #EF4444, #E3350D);
-      border-color: #991B1B;
-      color: #FFFFFF;
-    }
-    .pm-btn-emerald {
-      background: linear-gradient(180deg, #22C55E, #16A34A);
-      border-color: #14532D;
-      color: #FFFFFF;
-    }
-    .pm-btn-gold {
-      background: linear-gradient(180deg, #FDE047, #F59E0B);
-      border-color: #92400E;
-      color: #451A03;
-    }
-    .pm-feedback-banner {
-      padding: 10px 14px;
-      border-radius: 14px;
-      font-weight: 800;
-      font-size: 0.92rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .pm-feedback-banner.is-success {
-      background: #DCFCE7;
-      border: 2px solid #22C55E;
-      color: #166534;
-    }
-    .pm-feedback-banner.is-nudge {
-      background: #FEF3C7;
-      border: 2px solid #F59E0B;
-      color: #92400E;
-    }
-    .pm-caught-summary {
+    .pm-catch-caught-summary {
       padding: 18px;
       border-radius: 20px;
       background: linear-gradient(135deg, #FEF9C3, #ECFDF5);
@@ -495,12 +412,12 @@ function injectCatchStyles() {
       flex-direction: column;
       gap: 12px;
     }
-    @keyframes pm-ball-launch {
+    @keyframes pm-catch-ball-launch {
       0% { transform: translate3d(-90px, 70px, 0) scale(0.85) rotate(0deg); opacity: 0.7; }
       50% { transform: translate3d(-15px, -52px, 0) scale(1.12) rotate(220deg); opacity: 1; }
       100% { transform: translate3d(0, 0, 0) scale(1) rotate(360deg); opacity: 1; }
     }
-    @keyframes pm-ball-wobble {
+    @keyframes pm-catch-ball-wobble {
       0%, 100% { transform: rotate(0deg) translate3d(0, 0, 0); }
       25% { transform: rotate(-18deg) translate3d(-6px, 0, 0); }
       75% { transform: rotate(18deg) translate3d(6px, 0, 0); }
@@ -510,27 +427,32 @@ function injectCatchStyles() {
       40% { transform: translate3d(0, -18px, 0); }
     }
     @media (max-width: 720px) {
-      .pm-challenge-tabs {
+      .pm-catch-challenge-tabs {
         grid-template-columns: 1fr;
       }
-      .pm-tumblers-grid {
+      .pm-catch-tumblers-grid {
         gap: 8px;
       }
     }
     @media (prefers-reduced-motion: reduce) {
-      .pm-thrown-ball,
-      .pm-wild-target {
+      .pm-catch-thrown-ball,
+      .pm-catch-wild-target {
         animation: none !important;
         transition: none !important;
       }
     }
-    [data-reduced-motion="true"] .pm-thrown-ball,
-    [data-reduced-motion="true"] .pm-wild-target {
+    [data-reduced-motion="true"] .pm-catch-thrown-ball,
+    [data-reduced-motion="true"] .pm-catch-wild-target {
       animation: none !important;
       transition: none !important;
     }
   `;
   document.head.appendChild(style);
+}
+
+function removeCatchStyles() {
+  if (typeof document === 'undefined') return;
+  document.getElementById(STYLE_ELEMENT_ID)?.remove();
 }
 
 function resolveRoute(profile) {
@@ -680,6 +602,44 @@ function syncRotomToProblem(problem) {
   ctx.rotomPane.setMood?.('curious', 'Line up your math throw to catch this Pokémon!');
 }
 
+function formatSkillLabel(problem, fallback) {
+  const friendly = ctx?.mathEngine?.formatSkillTag?.(problem?.skillTag);
+  return friendly || fallback || 'Math Adventure';
+}
+
+/** Called whenever a brand-new problem is put in front of the learner. */
+function onNewProblem(problem) {
+  if (!problem || !ctx) return;
+  ctx.speedBlitz?.resetForProblem?.();
+  const profile = ctx.state?.getActiveProfile?.() || stateSession?.profile;
+  if (profile?.settings?.speech) {
+    ctx.audio?.speakText?.(problem.spokenPrompt || problem.promptText, false);
+  }
+}
+
+function buildRotomMetrics(profile, adaptiveRes, forceStreak = null) {
+  const streak = forceStreak !== null
+    ? forceStreak
+    : Math.max(0, Number(adaptiveRes?.streak ?? profile?.sessionStreak) || 0);
+  const metrics = {
+    streak,
+    criticalReady: streak >= 4 || Boolean(adaptiveRes?.triggerCriticalChallenge),
+    totalSolved: Math.max(0, Number(profile?.totalSolved) || 0),
+  };
+  const shinyRollBonus = Number(adaptiveRes?.shinyRollBonus) || 0;
+  if (shinyRollBonus > 0) metrics.shinyBonusPct = Math.round(shinyRollBonus * 100);
+  return metrics;
+}
+
+function hideHundredsTumbler(problem) {
+  const max = Array.isArray(problem?.targetRange) ? Number(problem.targetRange[1]) : NaN;
+  return Number.isFinite(max) && max < 100;
+}
+
+function placeValueTotal(s) {
+  return s.dials.h * 100 + s.dials.t * 10 + s.dials.o;
+}
+
 function initCatchEncounter(challengeIdx = 0, useParams = false) {
   const profile = ctx.state.getActiveProfile();
   const route = resolveRoute(profile);
@@ -747,7 +707,8 @@ function switchChallengeTab(nextType) {
   stateSession.hintsOpenedAtStart = 0;
 
   syncRotomToProblem(problem);
-  render();
+  render({ keepArena: true });
+  onNewProblem(problem);
 }
 
 function renderPokemonVisualSlot(slotEl, pokemon, options) {
@@ -813,6 +774,100 @@ function updateCatchQuests(quests, {
   }
 }
 
+function ballPhaseClass(phase) {
+  switch (phase) {
+    case 'launch': return 'is-launching';
+    case 'wobble-0': return 'is-wobble-0';
+    case 'wobble-1': return 'is-wobble-1';
+    case 'wobble-2': return 'is-wobble-2';
+    case 'caught': return 'is-caught';
+    default: return '';
+  }
+}
+
+function statusIcon(variant) {
+  return variant === 'nudge' ? '💡' : variant === 'success' ? '🌟' : '🎯';
+}
+
+function statusClassName(variant) {
+  return `pokenav-feedback ${variant === 'nudge' ? 'is-nudge' : variant === 'success' ? 'is-correct' : 'is-info'}`;
+}
+
+function statusInnerHtml(s) {
+  if (!s?.statusMessage) return '';
+  return `<span>${statusIcon(s.statusVariant)}</span><span>${escapeHtml(s.statusMessage)}</span>`;
+}
+
+function replayClass(el, className) {
+  if (!el) return;
+  el.classList.remove(className);
+  void el.offsetWidth;
+  el.classList.add(className);
+}
+
+function getArenaEl() {
+  return container?.querySelector('.pm-catch-arena') || null;
+}
+
+/** Updates the feedback banner in place. */
+function patchStatus() {
+  const el = container?.querySelector('[data-catch-region="status"]');
+  if (!el || !stateSession) return;
+  el.className = statusClassName(stateSession.statusVariant);
+  el.innerHTML = statusInnerHtml(stateSession);
+}
+
+/**
+ * Syncs wild-target state and the Poké Ball overlay in place so the sprite and
+ * biome backdrop never reload while the hop / launch / wobble animations play.
+ */
+function patchArena() {
+  const s = stateSession;
+  if (!container || !s) return;
+
+  const target = container.querySelector('.pm-catch-wild-target');
+  if (target) {
+    target.classList.toggle('is-absorbed', s.wildState === 'absorbed');
+    if (s.wildState === 'hopped') {
+      replayClass(target, 'is-hopped');
+    } else {
+      target.classList.remove('is-hopped');
+    }
+  }
+
+  const host = container.querySelector('[data-ball-host]');
+  if (host) {
+    if (!s.ballPhase) {
+      host.innerHTML = '';
+    } else {
+      let ball = host.querySelector('.pm-catch-thrown-ball');
+      if (!ball) {
+        const selectedBall = getBallDef(s.selectedBallId, s.profile);
+        host.innerHTML = `
+          <div class="pm-catch-capture-ball-overlay">
+            <div class="pm-catch-thrown-ball ${ballPhaseClass(s.ballPhase)}" data-phase="${escapeHtml(s.ballPhase)}">${selectedBall.svgMarkup}</div>
+          </div>
+        `;
+      } else if (ball.getAttribute('data-phase') !== s.ballPhase) {
+        ball.classList.remove('is-launching', 'is-wobble-0', 'is-wobble-1', 'is-wobble-2', 'is-caught');
+        void ball.offsetWidth; // restart the CSS animation for the next wobble
+        ball.classList.add(ballPhaseClass(s.ballPhase));
+        ball.setAttribute('data-phase', s.ballPhase);
+      }
+    }
+  }
+
+  const meta = container.querySelector('[data-encounter-meta]');
+  if (meta) meta.textContent = encounterMetaText();
+}
+
+function encounterMetaText() {
+  const s = stateSession;
+  const wild = s.wildPokemon;
+  const caught = s.profile?.caught?.[wild.id];
+  return `Pokédex #${String(wild.dexNumber || 25).padStart(3, '0')} • ${caught ? `Caught ×${caught.count}` : 'New Species!'}`;
+}
+
 function attemptCatchSubmission(submittedValue) {
   if (!mounted || !stateSession || stateSession.animating || stateSession.caughtComplete) return;
   const problem = stateSession.problem;
@@ -822,6 +877,7 @@ function attemptCatchSubmission(submittedValue) {
   const isCorrect = Boolean(ctx.mathEngine?.validateAnswer?.(problem, submittedValue));
   const currentHintTier = Number(ctx.rotomPane?.getCurrentHintTier?.() || 0);
   const hintsUsed = Math.max(stateSession.hintsOpenedAtStart || 0, currentHintTier);
+  const isComparison = stateSession.challengeType === 'comparison';
 
   if (!isCorrect) {
     stateSession.missesThisEncounter += 1;
@@ -833,7 +889,7 @@ function attemptCatchSubmission(submittedValue) {
     });
     stateSession.profile = updatedProfile || stateSession.profile;
 
-    if (stateSession.challengeType === 'comparison') {
+    if (isComparison) {
       stateSession.scaleChoice = String(submittedValue);
     }
     stateSession.wildState = 'hopped';
@@ -841,35 +897,41 @@ function attemptCatchSubmission(submittedValue) {
     stateSession.statusVariant = 'nudge';
 
     ctx.audio?.playGentleNudge?.();
-    const arenaEl = container?.querySelector('.pm-catch-arena');
-    if (arenaEl) {
-      ctx.vfx?.spawnFloatingText?.(arenaEl, 'Hopped loose!', 'nudge');
-    }
     if (adaptiveRes?.autoOpenHintTier >= 1) {
       ctx.rotomPane?.openHintTier?.(adaptiveRes.autoOpenHintTier);
     }
     ctx.rotomPane?.setMood?.('encouraging', adaptiveRes?.encouragementMessage || 'Check Rotom-Dex for a helpful clue!');
-    ctx.rotomPane?.updateMetrics?.({
-      streak: 0,
-      consecutiveMisses: adaptiveRes?.consecutiveMisses || 1,
-      shinyRollBonus: 0,
-    });
-    ctx.rotomPane?.render?.(stateSession.profile);
-    render();
+    ctx.rotomPane?.updateMetrics?.(buildRotomMetrics(stateSession.profile, adaptiveRes, 0));
+
+    // In-place hop + graze; then float text on the still-mounted arena.
+    patchStatus();
+    patchArena();
+    if (isComparison) {
+      refreshChallenge();
+    } else {
+      replayClass(container?.querySelector('[data-action="submit-catch"]'), 'pokenav-graze');
+    }
+    const arenaEl = getArenaEl();
+    if (arenaEl) {
+      ctx.vfx?.spawnFloatingText?.(arenaEl, 'Hopped loose!', 'nudge');
+    }
 
     trackTimeout(() => {
       if (!stateSession) return;
       stateSession.wildState = 'idle';
       stateSession.scaleChoice = null;
-      render();
+      patchArena();
+      if (isComparison) refreshChallenge();
     }, 380);
     return;
   }
 
   // Correct answer -> Launch full Poké Ball capture sequence!
-  if (stateSession.challengeType === 'comparison') {
+  if (isComparison) {
     stateSession.scaleChoice = String(submittedValue);
   }
+  // main.js owns the Speed Blitz window and awards +2 Coins & +2 Stardust itself.
+  stateSession.blitzBonus = ctx.speedBlitz?.consumeBonus?.() || false;
   stateSession.animating = true;
   stateSession.ballPhase = 'launch';
   stateSession.wildState = 'absorbed';
@@ -878,31 +940,22 @@ function attemptCatchSubmission(submittedValue) {
   stateSession.statusVariant = 'info';
 
   ctx.audio?.playPokeballThrow?.();
-  render();
+  patchStatus();
+  patchArena();
+  if (isComparison) refreshChallenge();
 
-  trackTimeout(() => {
+  const setWobble = (phase, message, wobbleIdx) => {
     if (!stateSession) return;
-    stateSession.ballPhase = 'wobble-0';
-    stateSession.statusMessage = 'Wobble… 1!';
-    ctx.audio?.playPokeballWobble?.(0);
-    render();
-  }, 550);
+    stateSession.ballPhase = phase;
+    stateSession.statusMessage = message;
+    ctx.audio?.playPokeballWobble?.(wobbleIdx);
+    patchStatus();
+    patchArena();
+  };
 
-  trackTimeout(() => {
-    if (!stateSession) return;
-    stateSession.ballPhase = 'wobble-1';
-    stateSession.statusMessage = 'Wobble… 2!';
-    ctx.audio?.playPokeballWobble?.(1);
-    render();
-  }, 1100);
-
-  trackTimeout(() => {
-    if (!stateSession) return;
-    stateSession.ballPhase = 'wobble-2';
-    stateSession.statusMessage = 'Almost… 3!';
-    ctx.audio?.playPokeballWobble?.(2);
-    render();
-  }, 1650);
+  trackTimeout(() => setWobble('wobble-0', 'Wobble… 1!', 0), 550);
+  trackTimeout(() => setWobble('wobble-1', 'Wobble… 2!', 1), 1100);
+  trackTimeout(() => setWobble('wobble-2', 'Almost… 3!', 2), 1650);
 
   trackTimeout(() => {
     if (!stateSession) return;
@@ -997,20 +1050,20 @@ function finalizeSuccessfulCatch(problem, hintsUsed, grade) {
     ctx.shell?.showToast?.('Classic Trainer 1996 Heritage Emblem unlocked!', 'success');
   }
   ctx.rotomPane?.setMood?.('starry', `Click! ${wild.name} joined your Pokédex!`);
-  ctx.rotomPane?.updateMetrics?.({
-    streak: adaptiveRes?.streak || 1,
-    consecutiveMisses: 0,
-    shinyRollBonus: adaptiveRes?.shinyRollBonus || 0,
-    chargePercent: stateSession.profile?.evolutionMeter || 0,
-  });
-  ctx.rotomPane?.render?.(stateSession.profile);
+  ctx.rotomPane?.updateMetrics?.(buildRotomMetrics(stateSession.profile, adaptiveRes));
 
-  render();
+  // Swap the console for the caught summary; arena (sprite + backdrop) is patched in place.
+  render({ keepArena: true });
 
-  const arenaEl = container?.querySelector('.pm-catch-arena');
+  const arenaEl = getArenaEl();
   if (arenaEl) {
     ctx.vfx?.burstConfetti?.(arenaEl);
     ctx.vfx?.spawnFloatingText?.(arenaEl, 'Gotcha!', 'crit');
+    if (stateSession.blitzBonus) {
+      const bonus = stateSession.blitzBonus;
+      const coins = typeof bonus === 'object' && Number.isFinite(Number(bonus.coins)) ? Number(bonus.coins) : 2;
+      ctx.vfx?.spawnFloatingText?.(arenaEl, `⚡ Speed Blitz +${coins}c`, 'coins');
+    }
   }
 }
 
@@ -1059,7 +1112,7 @@ function renderNumberLineSvgMarkup() {
   }
 
   return `
-    <svg class="pm-nl-svg" viewBox="0 0 ${width} 125" role="img" aria-label="Interactive number line from ${cfg.min} to ${cfg.max}">
+    <svg class="pm-catch-nl-svg" viewBox="0 0 ${width} 125" role="img" aria-label="Interactive number line from ${cfg.min} to ${cfg.max}">
       <rect x="0" y="0" width="${width}" height="125" rx="12" fill="#FFFFFF"/>
       <line x1="${padX}" y1="${yTrack}" x2="${width - padX}" y2="${yTrack}" stroke="#94A3B8" stroke-width="6" stroke-linecap="round"/>
       ${ticks.join('')}
@@ -1077,24 +1130,22 @@ function renderChallengeMarkup() {
 
   if (s.challengeType === 'numberLine') {
     const cfg = s.nlConfig || { min: 0, max: 20, snapStep: 1, majorStep: 2 };
-    const displayAim = s.typedBuffer ? s.typedBuffer : String(s.aimValue);
+    const displayAim = nlDisplayAim(s);
     return `
-      <div class="pm-nl-wrap">
+      <div class="pm-catch-nl-wrap">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <span style="font-weight:800;font-size:0.86rem;color:#475569;">
-            Tap or drag on the Number Line, slide, or type your aim!
+            Tap or drag on the Number Line, slide, type, or use ← → keys to aim!
           </span>
-          <span class="pm-stat-chip pm-num" style="padding:4px 12px;border-radius:999px;background:#0F172A;color:#FFCB05;font-weight:900;">
-            Aim: ${escapeHtml(displayAim)}
-          </span>
+          <span class="pm-catch-stat-chip pm-catch-num" data-nl-aim style="padding:4px 12px;border-radius:999px;background:#0F172A;color:#FFCB05;font-weight:900;">Aim: ${escapeHtml(displayAim)}</span>
         </div>
         ${renderNumberLineSvgMarkup()}
-        <div class="pm-nl-controls">
-          <button type="button" class="pm-btn-3d" data-nl-nudge="${-cfg.snapStep}" style="min-height:46px;padding:6px 14px;">-${cfg.snapStep}</button>
-          <input type="range" class="pm-nl-slider" min="${cfg.min}" max="${cfg.max}" step="${cfg.snapStep}" value="${Math.max(cfg.min, Math.min(cfg.max, Number(s.aimValue) || cfg.min))}" aria-label="Number line aim slider" />
-          <button type="button" class="pm-btn-3d" data-nl-nudge="${cfg.snapStep}" style="min-height:46px;padding:6px 14px;">+${cfg.snapStep}</button>
+        <div class="pm-catch-nl-controls">
+          <button type="button" class="btn-3d" data-nl-nudge="${-cfg.snapStep}" aria-label="Move aim left by ${cfg.snapStep}">-${cfg.snapStep}</button>
+          <input type="range" class="pm-catch-nl-slider" min="${cfg.min}" max="${cfg.max}" step="${cfg.snapStep}" value="${Math.max(cfg.min, Math.min(cfg.max, Number(s.aimValue) || cfg.min))}" aria-label="Number line aim slider" />
+          <button type="button" class="btn-3d" data-nl-nudge="${cfg.snapStep}" aria-label="Move aim right by ${cfg.snapStep}">+${cfg.snapStep}</button>
         </div>
-        <button type="button" class="pm-btn-3d pm-btn-throw" data-action="submit-catch" style="width:100%;">
+        <button type="button" class="btn-3d btn-primary" data-action="submit-catch" data-nl-throw style="width:100%;">
           Throw Poké Ball at ${escapeHtml(displayAim)}! 🎯
         </button>
       </div>
@@ -1102,31 +1153,25 @@ function renderChallengeMarkup() {
   }
 
   if (s.challengeType === 'placeValue') {
-    const total = s.dials.h * 100 + s.dials.t * 10 + s.dials.o;
+    const cols = placeColumns(p);
     return `
       <div style="display:flex;flex-direction:column;gap:12px;">
-        <div class="pm-tumblers-grid">
-          ${[
-            { key: 'h', label: 'Hundreds (100s)' },
-            { key: 't', label: 'Tens (10s)' },
-            { key: 'o', label: 'Ones (1s)' },
-          ].map((col) => `
-            <div class="pm-tumbler-col">
+        <div class="pm-catch-tumblers-grid" style="grid-template-columns:repeat(${cols.length}, minmax(0, 1fr));">
+          ${cols.map((col) => `
+            <div class="pm-catch-tumbler-col">
               <div style="font-size:0.8rem;font-weight:900;color:#64748B;">${col.label}</div>
-              <button type="button" class="pm-dial-btn" data-dial="${col.key}" data-delta="1" aria-label="Increase ${col.label}">+</button>
-              <div class="pm-tumbler-digit pm-num">${s.dials[col.key]}</div>
-              <button type="button" class="pm-dial-btn" data-dial="${col.key}" data-delta="-1" aria-label="Decrease ${col.label}">−</button>
+              <button type="button" class="pokenav-keypad-btn pm-catch-dial-btn" data-dial="${col.key}" data-delta="1" aria-label="Increase ${col.label}">+</button>
+              <div class="pm-catch-tumbler-digit pm-catch-num" data-dial-digit="${col.key}">${s.dials[col.key]}</div>
+              <button type="button" class="pokenav-keypad-btn pm-catch-dial-btn" data-dial="${col.key}" data-delta="-1" aria-label="Decrease ${col.label}">−</button>
             </div>
           `).join('')}
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:10px 14px;border-radius:14px;background:#FFF9F0;border:2px solid #E2D5BE;">
-          <span class="pm-num" style="font-weight:900;font-size:1.05rem;">
-            ${s.dials.h * 100} + ${s.dials.t * 10} + ${s.dials.o} = <strong style="color:#E3350D;font-size:1.2rem;">${total}</strong>
-          </span>
+          <span class="pm-catch-num" data-pv-eq style="font-weight:900;font-size:1.05rem;">${placeValueEquationHtml(s)}</span>
           <span style="font-size:0.8rem;font-weight:700;color:#64748B;">Tip: You can also type digits 0–9 + Enter!</span>
         </div>
-        <button type="button" class="pm-btn-3d pm-btn-throw" data-action="submit-catch" style="width:100%;">
-          Unlock (${total}) & Throw Poké Ball! 🔐
+        <button type="button" class="btn-3d btn-primary" data-action="submit-catch" data-pv-throw style="width:100%;">
+          Unlock (${placeValueTotal(s)}) &amp; Throw Poké Ball! 🔐
         </button>
       </div>
     `;
@@ -1139,9 +1184,19 @@ function renderChallengeMarkup() {
     if (s.scaleChoice === '>') tiltDeg = -8;
     else if (s.scaleChoice === '<') tiltDeg = 8;
   }
+  const cmpTile = (val, symbolHtml, label) => {
+    const state = s.scaleChoice === val
+      ? (s.wildState === 'hopped' ? 'is-graze' : (s.animating || s.caughtComplete) ? 'is-correct' : '')
+      : '';
+    return `
+        <button type="button" class="pokenav-choice-tile pm-catch-cmp-btn ${state}" data-cmp-val="${escapeHtml(val)}">
+          <span>${symbolHtml}</span>
+          <span style="font-size:0.74rem;color:#64748B;">${label}</span>
+        </button>`;
+  };
 
   return `
-    <div class="pm-scale-stage">
+    <div class="pm-catch-scale-stage">
       <svg viewBox="0 0 420 155" width="100%" style="max-width:420px;height:auto;" aria-label="Power comparison balance scale">
         <polygon points="196,144 224,144 210,110" fill="#64748B" stroke="#1E293B" stroke-width="2.5"/>
         <rect x="172" y="142" width="76" height="9" rx="4" fill="#334155"/>
@@ -1155,140 +1210,114 @@ function renderChallengeMarkup() {
           <text x="337" y="100" text-anchor="middle" font-size="16" font-weight="900" fill="#0F172A" style="font-variant-numeric:tabular-nums;">${escapeHtml(p.rightExpr || '')}</text>
         </g>
       </svg>
-      <div class="pm-cmp-buttons">
-        <button type="button" class="pm-cmp-btn" data-cmp-val="<">
-          <span>&lt;</span>
-          <span style="font-size:0.74rem;color:#64748B;">Less Than</span>
-        </button>
-        <button type="button" class="pm-cmp-btn" data-cmp-val="=">
-          <span>=</span>
-          <span style="font-size:0.74rem;color:#64748B;">Equal To</span>
-        </button>
-        <button type="button" class="pm-cmp-btn" data-cmp-val=">">
-          <span>&gt;</span>
-          <span style="font-size:0.74rem;color:#64748B;">Greater Than</span>
-        </button>
+      <div class="pokenav-choice-grid pm-catch-cmp-buttons">
+        ${cmpTile('<', '&lt;', 'Less Than')}
+        ${cmpTile('=', '=', 'Equal To')}
+        ${cmpTile('>', '&gt;', 'Greater Than')}
       </div>
     </div>
   `;
 }
 
-function render() {
-  if (!mounted || !container || !stateSession) return;
+function nlDisplayAim(s) {
+  return s.typedBuffer ? s.typedBuffer : String(s.aimValue);
+}
+
+function placeColumns(problem) {
+  const cols = [
+    { key: 'h', label: 'Hundreds (100s)' },
+    { key: 't', label: 'Tens (10s)' },
+    { key: 'o', label: 'Ones (1s)' },
+  ];
+  return hideHundredsTumbler(problem) ? cols.slice(1) : cols;
+}
+
+function placeValueEquationHtml(s) {
+  const total = placeValueTotal(s);
+  const parts = hideHundredsTumbler(s.problem)
+    ? `${s.dials.t * 10} + ${s.dials.o}`
+    : `${s.dials.h * 100} + ${s.dials.t * 10} + ${s.dials.o}`;
+  return `${parts} = <strong style="color:#E3350D;font-size:1.2rem;">${total}</strong>`;
+}
+
+function renderArenaMarkup() {
   const s = stateSession;
-  const route = s.route;
   const wild = s.wildPokemon;
   const wildType = wild?.types?.[0] || 'normal';
-  const balls = getAvailableBalls(s.profile);
   const selectedBall = getBallDef(s.selectedBallId, s.profile);
+  const wildTargetCls = s.wildState === 'absorbed' ? 'is-absorbed' : s.wildState === 'hopped' ? 'is-hopped' : '';
 
-  const wildTargetCls = s.wildState === 'absorbed'
-    ? 'is-absorbed'
-    : s.wildState === 'hopped'
-      ? 'is-hopped'
-      : '';
-
-  const ballOverlayCls = s.ballPhase === 'launch'
-    ? 'is-launching'
-    : s.ballPhase === 'wobble-0'
-      ? 'is-wobble-0'
-      : s.ballPhase === 'wobble-1'
-        ? 'is-wobble-1'
-        : s.ballPhase === 'wobble-2'
-          ? 'is-wobble-2'
-          : s.ballPhase === 'caught'
-            ? 'is-caught'
-            : '';
-
-  container.innerHTML = `
-    <div class="pm-catch-root">
-      <div class="pm-catch-header">
-        <div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span class="pm-catch-pill">Safari Catch • Route ${route.number}</span>
-            ${s.isWeakened ? '<span class="pm-catch-pill is-weakened">Weakened! +Catch Boost</span>' : ''}
-            ${s.isShiny ? '<span class="pm-catch-pill is-shiny">✨ SHINY ENCOUNTER</span>' : ''}
-          </div>
-          <h2 style="margin:4px 0 0;font-size:1.08rem;font-weight:900;">${escapeHtml(route.name)} Safari Zone</h2>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button type="button" class="pm-btn-3d" data-action="back-battle" style="min-height:42px;padding:6px 12px;font-size:0.84rem;">
-            ← Wild Battle
-          </button>
-          <button type="button" class="pm-btn-3d" data-action="next-wild" style="min-height:42px;padding:6px 12px;font-size:0.84rem;">
-            🔄 New Encounter
-          </button>
-        </div>
-      </div>
-
+  return `
       <div class="pm-catch-arena" aria-live="polite">
         <div class="pm-catch-bg"></div>
         <div class="pm-catch-stage-row">
-          <div class="pm-encounter-card">
+          <div class="pm-catch-encounter-card">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
               <strong style="font-size:1.02rem;">${escapeHtml(wild.name)}</strong>
               <span style="padding:2px 8px;border-radius:999px;background:${getTypeColor(wildType)};color:#fff;font-size:0.7rem;font-weight:800;text-transform:uppercase;">
                 ${escapeHtml(wildType)}
               </span>
             </div>
-            <div class="pm-num" style="font-size:0.8rem;font-weight:700;color:#475569;margin-top:4px;">
-              Pokédex #${String(wild.dexNumber || 25).padStart(3, '0')} • ${s.profile?.caught?.[wild.id] ? `Caught ×${s.profile.caught[wild.id].count}` : 'New Species!'}
-            </div>
+            <div class="pm-catch-num" data-encounter-meta style="font-size:0.8rem;font-weight:700;color:#475569;margin-top:4px;">${escapeHtml(encounterMetaText())}</div>
           </div>
 
-          <div class="pm-encounter-visual-box">
-            <div class="pm-wild-target ${wildTargetCls}" data-slot="wild"></div>
-            ${s.ballPhase ? `
-              <div class="pm-capture-ball-overlay">
-                <div class="pm-thrown-ball ${ballOverlayCls}">${selectedBall.svgMarkup}</div>
-              </div>
-            ` : ''}
+          <div class="pm-catch-encounter-visual-box">
+            <div class="pm-catch-wild-target ${wildTargetCls}" data-slot="wild"></div>
+            <div class="pm-catch-region" data-ball-host>${s.ballPhase ? `
+              <div class="pm-catch-capture-ball-overlay">
+                <div class="pm-catch-thrown-ball ${ballPhaseClass(s.ballPhase)}" data-phase="${escapeHtml(s.ballPhase)}">${selectedBall.svgMarkup}</div>
+              </div>` : ''}</div>
           </div>
         </div>
       </div>
+  `;
+}
 
-      <div class="pm-feedback-banner ${s.statusVariant === 'nudge' ? 'is-nudge' : s.statusVariant === 'success' ? 'is-success' : ''}"
-           style="${s.statusVariant === 'info' ? 'background:#FFFFFF;border:2px solid #E2D5BE;color:#334155;' : ''}">
-        <span>${s.statusVariant === 'nudge' ? '💡' : s.statusVariant === 'success' ? '🌟' : '🎯'}</span>
-        <span>${escapeHtml(s.statusMessage)}</span>
-      </div>
+function renderControlsMarkup() {
+  const s = stateSession;
+  const wild = s.wildPokemon;
 
-      ${s.caughtComplete ? `
-        <div class="pm-caught-summary">
+  if (s.caughtComplete) {
+    return `
+        <div class="pm-catch-caught-summary">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <span class="pm-catch-pill is-weakened">${escapeHtml(s.catchResult?.gradeLabel || 'Caught!')}</span>
             ${s.catchResult?.wasNewSpecies ? '<span class="pm-catch-pill is-shiny">📖 New Pokédex Entry!</span>' : ''}
             ${s.isShiny ? '<span class="pm-catch-pill is-shiny">✨ Shiny Logged!</span>' : ''}
           </div>
           <h3 style="margin:0;font-size:1.18rem;font-weight:900;">${escapeHtml(wild.name)} was added to your Pokédex Vault!</h3>
-          <div class="pm-num" style="font-weight:800;color:#166534;">
+          <div class="pm-catch-num" style="font-weight:800;color:#166534;">
             +${s.catchResult?.stardustGain || 8} Stardust • +${s.catchResult?.xpGain || 18} Buddy XP • +${s.catchResult?.coinGain || 6} Coins
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button type="button" class="pm-btn-3d pm-btn-emerald" data-action="catch-another">
+            <button type="button" class="btn-3d btn-success" data-action="catch-another">
               Catch Another Pokémon →
             </button>
-            <button type="button" class="pm-btn-3d pm-btn-gold" data-action="go-pokedex">
+            <button type="button" class="btn-3d btn-gold" data-action="go-pokedex">
               View in Pokédex 📖
             </button>
-            <button type="button" class="pm-btn-3d" data-action="back-battle">
+            <button type="button" class="btn-3d" data-action="back-battle">
               Back to Battle
             </button>
           </div>
         </div>
-      ` : `
+    `;
+  }
+
+  const balls = getAvailableBalls(s.profile);
+  return `
         <div style="display:flex;flex-direction:column;gap:8px;">
           <div style="font-size:0.84rem;font-weight:800;color:#475569;">Select Your Poké Ball</div>
-          <div class="pm-ball-tray">
+          <div class="pm-catch-ball-tray">
             ${balls.map((ball) => {
               const isSelected = ball.id === s.selectedBallId;
               const disabled = !ball.isPractice && ball.owned <= 0;
               return `
-                <button type="button" class="pm-ball-btn ${isSelected ? 'is-selected' : ''}" data-ball-id="${escapeHtml(ball.id)}" ${disabled ? 'disabled' : ''}>
-                  <span class="pm-ball-icon">${ball.svgMarkup}</span>
+                <button type="button" class="pokenav-tactile pm-catch-ball-btn ${isSelected ? 'is-selected' : ''}" data-ball-id="${escapeHtml(ball.id)}" ${disabled ? 'disabled' : ''}>
+                  <span class="pm-catch-ball-icon">${ball.svgMarkup}</span>
                   <span>
                     <div style="font-weight:900;font-size:0.86rem;">${escapeHtml(ball.name)}</div>
-                    <div class="pm-num" style="font-size:0.75rem;font-weight:800;color:#64748B;">
+                    <div class="pm-catch-num" style="font-size:0.75rem;font-weight:800;color:#64748B;">
                       ${ball.isPractice ? 'Free ∞' : `×${ball.owned}`} • ${ball.catchMultiplier}×
                     </div>
                   </span>
@@ -1298,29 +1327,86 @@ function render() {
           </div>
         </div>
 
-        <div class="pm-challenge-tabs" role="tablist" aria-label="Catch Challenge Modes">
-          <button type="button" class="pm-tab-btn ${s.challengeType === 'numberLine' ? 'is-active' : ''}" data-tab="numberLine">
+        <div class="pm-catch-challenge-tabs" role="tablist" aria-label="Catch Challenge Modes">
+          <button type="button" class="pokenav-tactile pm-catch-tab-btn ${s.challengeType === 'numberLine' ? 'is-active' : ''}" data-tab="numberLine">
             🎯 Number Line Throw
           </button>
-          <button type="button" class="pm-tab-btn ${s.challengeType === 'placeValue' ? 'is-active' : ''}" data-tab="placeValue">
+          <button type="button" class="pokenav-tactile pm-catch-tab-btn ${s.challengeType === 'placeValue' ? 'is-active' : ''}" data-tab="placeValue">
             🔐 Place-Value Poké-Lock
           </button>
-          <button type="button" class="pm-tab-btn ${s.challengeType === 'comparison' ? 'is-active' : ''}" data-tab="comparison">
+          <button type="button" class="pokenav-tactile pm-catch-tab-btn ${s.challengeType === 'comparison' ? 'is-active' : ''}" data-tab="comparison">
             ⚖️ Power Scale (&lt; = &gt;)
           </button>
         </div>
 
-        <div class="pm-console-card">
-          <div class="pm-console-top">
-            <span class="pm-catch-pill">${escapeHtml(s.problem.skillTag || s.challengeType)}</span>
-            <button type="button" class="pm-btn-3d" data-action="speak" style="min-height:42px;padding:6px 12px;font-size:0.84rem;">
+        <div class="pm-catch-console-card">
+          <div class="pm-catch-console-top">
+            <span class="pm-catch-pill">${escapeHtml(formatSkillLabel(s.problem, s.challengeType))}</span>
+            <button type="button" class="btn-3d btn-sm" data-action="speak">
               🔊 Read Aloud
             </button>
           </div>
-          <p class="pm-prompt-text">${escapeHtml(s.problem.promptText)}</p>
-          ${renderChallengeMarkup()}
+          <p class="pm-catch-prompt-text">${escapeHtml(s.problem.promptText)}</p>
+          <div class="pm-catch-region" data-catch-region="challenge">${renderChallengeMarkup()}</div>
         </div>
-      `}
+  `;
+}
+
+function setRegion(name, html) {
+  const el = container?.querySelector(`[data-catch-region="${name}"]`);
+  if (el) el.innerHTML = html;
+}
+
+/** Re-renders only the challenge widget (never the arena, sprite or backdrop). */
+function refreshChallenge() {
+  if (!stateSession || stateSession.caughtComplete) return;
+  setRegion('challenge', renderChallengeMarkup());
+}
+
+/**
+ * Full render rebuilds the shell (reloading the sprite and backdrop). Pass keepArena to
+ * refresh the header/controls regions and patch the arena in place instead.
+ */
+function render({ keepArena = false } = {}) {
+  if (!mounted || !container || !stateSession) return;
+  const s = stateSession;
+  const route = s.route;
+  const wild = s.wildPokemon;
+
+  const existingRoot = container.querySelector('.pm-catch-root');
+  if (keepArena && existingRoot && existingRoot.querySelector('.pm-catch-arena')) {
+    setRegion('controls', renderControlsMarkup());
+    patchStatus();
+    patchArena();
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="pm-catch-root">
+      <div class="pm-catch-header" data-catch-region="header">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span class="pm-catch-pill">Safari Catch • Route ${route.number}</span>
+            ${s.isWeakened ? '<span class="pm-catch-pill is-weakened">Weakened! +Catch Boost</span>' : ''}
+            ${s.isShiny ? '<span class="pm-catch-pill is-shiny">✨ SHINY ENCOUNTER</span>' : ''}
+          </div>
+          <h2 style="margin:4px 0 0;font-size:1.08rem;font-weight:900;">${escapeHtml(route.name)} Safari Zone</h2>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn-3d btn-sm" data-action="back-battle">
+            ← Wild Battle
+          </button>
+          <button type="button" class="btn-3d btn-sm" data-action="next-wild">
+            🔄 New Encounter
+          </button>
+        </div>
+      </div>
+
+      ${renderArenaMarkup()}
+
+      <div class="${statusClassName(s.statusVariant)}" data-catch-region="status" aria-live="polite">${statusInnerHtml(s)}</div>
+
+      <div class="pm-catch-region" data-catch-region="controls">${renderControlsMarkup()}</div>
     </div>
   `;
 
@@ -1334,8 +1420,39 @@ function render() {
     size: 132,
     animate: true,
   });
+}
 
-  bindEvents();
+/** Keeps the Number Line widget in sync without recreating the range input. */
+function syncNumberLine() {
+  const s = stateSession;
+  const wrap = container?.querySelector('.pm-catch-nl-wrap');
+  if (!wrap || !s?.nlConfig) return;
+  const cfg = s.nlConfig;
+  const aim = nlDisplayAim(s);
+
+  const chip = wrap.querySelector('[data-nl-aim]');
+  if (chip) chip.textContent = `Aim: ${aim}`;
+  const throwBtn = wrap.querySelector('[data-nl-throw]');
+  if (throwBtn) throwBtn.textContent = `Throw Poké Ball at ${aim}! 🎯`;
+  const svg = wrap.querySelector('.pm-catch-nl-svg');
+  if (svg) svg.outerHTML = renderNumberLineSvgMarkup();
+  const slider = wrap.querySelector('.pm-catch-nl-slider');
+  const clampedAim = Math.max(cfg.min, Math.min(cfg.max, Number(s.aimValue) || cfg.min));
+  if (slider && Number(slider.value) !== clampedAim) slider.value = String(clampedAim);
+}
+
+/** Keeps the Place-Value Poké-Lock tumblers in sync in place. */
+function syncPlaceValue() {
+  const s = stateSession;
+  if (!container || !s) return;
+  container.querySelectorAll('[data-dial-digit]').forEach((el) => {
+    const key = el.getAttribute('data-dial-digit');
+    el.textContent = String(s.dials[key] ?? 0);
+  });
+  const eq = container.querySelector('[data-pv-eq]');
+  if (eq) eq.innerHTML = placeValueEquationHtml(s);
+  const throwBtn = container.querySelector('[data-pv-throw]');
+  if (throwBtn) throwBtn.textContent = `Unlock (${placeValueTotal(s)}) & Throw Poké Ball! 🔐`;
 }
 
 function updateNumberLineVisual(nextVal) {
@@ -1347,154 +1464,144 @@ function updateNumberLineVisual(nextVal) {
     : clamped;
   stateSession.aimValue = snapped;
   stateSession.typedBuffer = '';
-  render();
+  syncNumberLine();
 }
 
-function bindEvents() {
+function nudgeAim(direction) {
+  const s = stateSession;
+  if (!s?.nlConfig) return;
+  const base = s.typedBuffer ? Number(s.typedBuffer) : s.aimValue;
+  updateNumberLineVisual(base + direction * s.nlConfig.snapStep);
+}
+
+function submitCurrentChallenge() {
+  const s = stateSession;
+  if (!s) return;
+  if (s.challengeType === 'numberLine') {
+    const val = s.typedBuffer ? Number(s.typedBuffer) : s.aimValue;
+    attemptCatchSubmission(val);
+  } else if (s.challengeType === 'placeValue') {
+    attemptCatchSubmission(placeValueTotal(s));
+  }
+}
+
+function startNextEncounter() {
+  const nextIdx = ((stateSession?.challengeIdx || 0) + 1) % CHALLENGE_ORDER.length;
+  initCatchEncounter(nextIdx, false);
+  syncRotomToProblem(stateSession.problem);
+  render();
+  onNewProblem(stateSession.problem);
+}
+
+function onContainerClick(e) {
   if (!container || !stateSession) return;
+  const target = e.target?.closest?.('[data-ball-id], [data-tab], [data-action], [data-nl-nudge], [data-dial], [data-cmp-val]');
+  if (!target || !container.contains(target)) return;
 
-  container.querySelectorAll('[data-ball-id]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (!stateSession || stateSession.animating || stateSession.caughtComplete) return;
-      const ballId = btn.getAttribute('data-ball-id');
-      const ball = getBallDef(ballId, stateSession.profile);
-      if (!ball.isPractice && ball.owned <= 0) return;
-      ctx.audio?.unlockAudio?.();
-      ctx.audio?.playClick?.('select');
-      stateSession.selectedBallId = ball.id;
-      render();
-    });
-  });
-
-  container.querySelectorAll('[data-tab]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tab = btn.getAttribute('data-tab');
-      if (tab) switchChallengeTab(tab);
-    });
-  });
-
-  container.querySelector('[data-action="speak"]')?.addEventListener('click', () => {
-    const p = stateSession?.problem;
-    if (p) ctx.audio?.speakText?.(p.spokenPrompt || p.promptText, true);
-  });
-
-  container.querySelector('[data-action="submit-catch"]')?.addEventListener('click', () => {
-    if (!stateSession) return;
-    if (stateSession.challengeType === 'numberLine') {
-      const val = stateSession.typedBuffer ? Number(stateSession.typedBuffer) : stateSession.aimValue;
-      attemptCatchSubmission(val);
-    } else if (stateSession.challengeType === 'placeValue') {
-      const val = stateSession.dials.h * 100 + stateSession.dials.t * 10 + stateSession.dials.o;
-      attemptCatchSubmission(val);
-    }
-  });
-
-  container.querySelectorAll('[data-nl-nudge]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (!stateSession || stateSession.animating) return;
-      ctx.audio?.playClick?.('tap');
-      const delta = Number(btn.getAttribute('data-nl-nudge')) || 0;
-      const base = stateSession.typedBuffer ? Number(stateSession.typedBuffer) : stateSession.aimValue;
-      updateNumberLineVisual(base + delta);
-    });
-  });
-
-  const slider = container.querySelector('.pm-nl-slider');
-  if (slider) {
-    slider.addEventListener('input', (e) => {
-      if (!stateSession || stateSession.animating) return;
-      stateSession.aimValue = Number(e.target.value);
-      stateSession.typedBuffer = '';
-      // Lightweight DOM sync without recreating the range input while dragging
-      const chip = container?.querySelector('.pm-nl-wrap .pm-stat-chip');
-      if (chip) chip.textContent = `Aim: ${stateSession.aimValue}`;
-      const throwBtn = container?.querySelector('[data-action="submit-catch"]');
-      if (throwBtn) throwBtn.textContent = `Throw Poké Ball at ${stateSession.aimValue}! 🎯`;
-      const svgHost = container?.querySelector('.pm-nl-svg');
-      if (svgHost) {
-        svgHost.outerHTML = renderNumberLineSvgMarkup();
-        bindSvgNumberLinePointer();
-      }
-    });
+  const ballId = target.getAttribute('data-ball-id');
+  if (ballId) {
+    if (stateSession.animating || stateSession.caughtComplete) return;
+    const ball = getBallDef(ballId, stateSession.profile);
+    if (!ball.isPractice && ball.owned <= 0) return;
+    ctx.audio?.unlockAudio?.();
+    ctx.audio?.playClick?.('select');
+    stateSession.selectedBallId = ball.id;
+    render({ keepArena: true });
+    return;
   }
 
-  bindSvgNumberLinePointer();
+  const tab = target.getAttribute('data-tab');
+  if (tab) {
+    switchChallengeTab(tab);
+    return;
+  }
 
-  container.querySelectorAll('[data-dial]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (!stateSession || stateSession.animating) return;
-      ctx.audio?.unlockAudio?.();
-      ctx.audio?.playClick?.('tap');
-      const key = btn.getAttribute('data-dial');
-      const delta = Number(btn.getAttribute('data-delta')) || 0;
-      stateSession.typedBuffer = '';
-      stateSession.dials[key] = (stateSession.dials[key] + delta + 10) % 10;
-      render();
-    });
-  });
-
-  container.querySelectorAll('[data-cmp-val]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const val = btn.getAttribute('data-cmp-val');
-      if (val) attemptCatchSubmission(val);
-    });
-  });
-
-  container.querySelector('[data-action="catch-another"]')?.addEventListener('click', () => {
-    ctx.audio?.playClick?.('select');
-    const nextIdx = ((stateSession?.challengeIdx || 0) + 1) % CHALLENGE_ORDER.length;
-    initCatchEncounter(nextIdx, false);
-    syncRotomToProblem(stateSession.problem);
-    render();
-  });
-
-  container.querySelector('[data-action="next-wild"]')?.addEventListener('click', () => {
+  const nudge = target.getAttribute('data-nl-nudge');
+  if (nudge !== null) {
+    if (stateSession.animating) return;
     ctx.audio?.playClick?.('tap');
-    const nextIdx = ((stateSession?.challengeIdx || 0) + 1) % CHALLENGE_ORDER.length;
-    initCatchEncounter(nextIdx, false);
-    syncRotomToProblem(stateSession.problem);
-    render();
-  });
+    nudgeAim(Math.sign(Number(nudge)) || 0);
+    return;
+  }
 
-  container.querySelector('[data-action="back-battle"]')?.addEventListener('click', () => {
-    ctx.audio?.playClick?.('tap');
-    ctx.onNavigate?.('battle', { mode: 'battle', routeId: stateSession?.route?.id });
-  });
-
-  container.querySelector('[data-action="go-pokedex"]')?.addEventListener('click', () => {
-    ctx.audio?.playClick?.('select');
-    ctx.onNavigate?.('camp', { tab: 'pokedex' });
-  });
-}
-
-function bindSvgNumberLinePointer() {
-  const svg = container?.querySelector('.pm-nl-svg');
-  if (!svg || !stateSession?.nlConfig) return;
-
-  const applyClientX = (clientX) => {
-    if (!stateSession || !stateSession.nlConfig || stateSession.animating) return;
-    const rect = svg.getBoundingClientRect();
-    if (!rect || rect.width <= 0) return;
-    const padRatio = 36 / 600;
-    const leftPx = rect.left + rect.width * padRatio;
-    const trackPx = rect.width * (1 - padRatio * 2);
-    const ratio = Math.max(0, Math.min(1, (clientX - leftPx) / Math.max(1, trackPx)));
-    const cfg = stateSession.nlConfig;
-    const rawVal = cfg.min + ratio * (cfg.max - cfg.min);
-    updateNumberLineVisual(rawVal);
-  };
-
-  svg.addEventListener('pointerdown', (e) => {
-    if (e.button !== undefined && e.button !== 0) return;
+  const dialKey = target.getAttribute('data-dial');
+  if (dialKey) {
+    if (stateSession.animating) return;
     ctx.audio?.unlockAudio?.();
     ctx.audio?.playClick?.('tap');
-    applyClientX(e.clientX);
-  });
+    const delta = Number(target.getAttribute('data-delta')) || 0;
+    stateSession.typedBuffer = '';
+    stateSession.dials[dialKey] = (stateSession.dials[dialKey] + delta + 10) % 10;
+    syncPlaceValue();
+    return;
+  }
+
+  const cmpVal = target.getAttribute('data-cmp-val');
+  if (cmpVal) {
+    attemptCatchSubmission(cmpVal);
+    return;
+  }
+
+  switch (target.getAttribute('data-action')) {
+    case 'speak': {
+      const p = stateSession.problem;
+      if (p) ctx.audio?.speakText?.(p.spokenPrompt || p.promptText, true);
+      break;
+    }
+    case 'submit-catch':
+      submitCurrentChallenge();
+      break;
+    case 'catch-another':
+      ctx.audio?.playClick?.('select');
+      startNextEncounter();
+      break;
+    case 'next-wild':
+      ctx.audio?.playClick?.('tap');
+      startNextEncounter();
+      break;
+    case 'back-battle':
+      ctx.audio?.playClick?.('tap');
+      ctx.onNavigate?.('battle', { mode: 'battle', routeId: stateSession?.route?.id });
+      break;
+    case 'go-pokedex':
+      ctx.audio?.playClick?.('select');
+      ctx.onNavigate?.('camp', { tab: 'pokedex' });
+      break;
+    default:
+      break;
+  }
+}
+
+function onContainerInput(e) {
+  const slider = e.target;
+  if (!slider?.classList?.contains('pm-catch-nl-slider')) return;
+  if (!stateSession || stateSession.animating) return;
+  stateSession.aimValue = Number(slider.value);
+  stateSession.typedBuffer = '';
+  syncNumberLine();
+}
+
+function onContainerPointerDown(e) {
+  const svg = e.target?.closest?.('.pm-catch-nl-svg');
+  if (!svg || !container?.contains(svg) || !stateSession?.nlConfig || stateSession.animating) return;
+  if (e.button !== undefined && e.button !== 0) return;
+  ctx.audio?.unlockAudio?.();
+  ctx.audio?.playClick?.('tap');
+
+  const rect = svg.getBoundingClientRect();
+  if (!rect || rect.width <= 0) return;
+  const padRatio = 36 / 600;
+  const leftPx = rect.left + rect.width * padRatio;
+  const trackPx = rect.width * (1 - padRatio * 2);
+  const ratio = Math.max(0, Math.min(1, (e.clientX - leftPx) / Math.max(1, trackPx)));
+  const cfg = stateSession.nlConfig;
+  updateNumberLineVisual(cfg.min + ratio * (cfg.max - cfg.min));
 }
 
 function applyTypedPlaceValueDigits(buf) {
-  const clean = buf.slice(-3).padStart(3, '0');
-  stateSession.dials.h = Number(clean[0]) || 0;
+  const hidden = hideHundredsTumbler(stateSession.problem);
+  const clean = buf.slice(hidden ? -2 : -3).padStart(3, '0');
+  stateSession.dials.h = hidden ? 0 : Number(clean[0]) || 0;
   stateSession.dials.t = Number(clean[1]) || 0;
   stateSession.dials.o = Number(clean[2]) || 0;
 }
@@ -1509,15 +1616,14 @@ export function mount(containerEl, context) {
   ctx = context;
 
   injectCatchStyles();
+  trackListener(container, 'click', onContainerClick);
+  trackListener(container, 'input', onContainerInput);
+  trackListener(container, 'pointerdown', onContainerPointerDown);
+
   initCatchEncounter(0, true);
   syncRotomToProblem(stateSession.problem);
   render();
-
-  if (typeof window !== 'undefined') {
-    trackListener(window, 'blur', () => {
-      // Defensive hook registered via trackListener to guarantee zero stray listeners
-    });
-  }
+  onNewProblem(stateSession.problem);
 }
 
 export function unmount() {
@@ -1527,6 +1633,7 @@ export function unmount() {
   if (container) {
     container.innerHTML = '';
   }
+  removeCatchStyles();
   container = null;
   ctx = null;
   stateSession = null;
@@ -1539,7 +1646,8 @@ export function handleKey(event) {
 
   const targetTag = event.target?.tagName;
   if (targetTag === 'TEXTAREA' || targetTag === 'SELECT') return false;
-  if (targetTag === 'INPUT' && event.target?.type !== 'range') return false;
+  const isRangeTarget = targetTag === 'INPUT' && event.target?.type === 'range';
+  if (targetTag === 'INPUT' && !isRangeTarget) return false;
 
   const key = event.key;
 
@@ -1552,7 +1660,15 @@ export function handleKey(event) {
   }
 
   if (stateSession.challengeType === 'numberLine') {
-    if (key >= '0' && key <= '9') {
+    if (key === 'ArrowLeft' || key === 'ArrowRight') {
+      // A focused slider already steps natively (and fires 'input'); don't double-nudge.
+      if (isRangeTarget) return false;
+      event.preventDefault?.();
+      ctx?.audio?.playClick?.('tap');
+      nudgeAim(key === 'ArrowRight' ? 1 : -1);
+      return true;
+    }
+    if (key >= '0' && key <= '9' && key.length === 1) {
       ctx?.audio?.unlockAudio?.();
       ctx?.audio?.playClick?.('tap');
       stateSession.typedBuffer = (stateSession.typedBuffer + key).slice(0, 4);
@@ -1561,7 +1677,7 @@ export function handleKey(event) {
         const cfg = stateSession.nlConfig;
         stateSession.aimValue = Math.max(cfg.min, Math.min(cfg.max, parsed));
       }
-      render();
+      syncNumberLine();
       return true;
     }
     if (key === 'Backspace') {
@@ -1571,7 +1687,7 @@ export function handleKey(event) {
         const cfg = stateSession.nlConfig;
         stateSession.aimValue = Math.max(cfg.min, Math.min(cfg.max, Number(stateSession.typedBuffer)));
       }
-      render();
+      syncNumberLine();
       return true;
     }
     if (key === 'Enter') {
@@ -1583,24 +1699,24 @@ export function handleKey(event) {
   }
 
   if (stateSession.challengeType === 'placeValue') {
-    if (key >= '0' && key <= '9') {
+    if (key >= '0' && key <= '9' && key.length === 1) {
       ctx?.audio?.unlockAudio?.();
       ctx?.audio?.playClick?.('tap');
-      stateSession.typedBuffer = (stateSession.typedBuffer + key).slice(-3);
+      const keep = hideHundredsTumbler(stateSession.problem) ? -2 : -3;
+      stateSession.typedBuffer = (stateSession.typedBuffer + key).slice(keep);
       applyTypedPlaceValueDigits(stateSession.typedBuffer);
-      render();
+      syncPlaceValue();
       return true;
     }
     if (key === 'Backspace') {
       ctx?.audio?.playClick?.('tap');
       stateSession.typedBuffer = stateSession.typedBuffer.slice(0, -1);
       applyTypedPlaceValueDigits(stateSession.typedBuffer || '0');
-      render();
+      syncPlaceValue();
       return true;
     }
     if (key === 'Enter') {
-      const val = stateSession.dials.h * 100 + stateSession.dials.t * 10 + stateSession.dials.o;
-      attemptCatchSubmission(val);
+      attemptCatchSubmission(placeValueTotal(stateSession));
       return true;
     }
     return false;
