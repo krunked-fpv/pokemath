@@ -1,0 +1,217 @@
+/* ============================================================================
+   PokéMath — Design Tokens & Accessible Storybook Foundations
+   ============================================================================ */
+
+:root {
+  /* Warm Nintendo Storybook Parchment Canvas & Surfaces */
+  --bg-canvas: #FFF9F0;
+  --bg-parchment: #FEF2E0;
+  --bg-parchment-deep: #F6E6CE;
+  --bg-glass: rgba(255, 253, 249, 0.90);
+  --bg-glass-strong: rgba(255, 253, 249, 0.96);
+  --bg-card: #FFFFFF;
+  --bg-card-soft: #FFFDF8;
+  --bg-inset: #F6EDE0;
+
+  /* Ink & Borders */
+  --text-primary: #1E293B;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --border-warm: #E7D8C3;
+  --border-strong: #D3BC9C;
+
+  /* Legacy 1996 PokéNav Trim Accents */
+  --poke-red: #E3350D;
+  --poke-red-dark: #B42504;
+  --poke-red-soft: #FEECE7;
+
+  --poke-gold: #FFCB05;
+  --poke-gold-dark: #C29100;
+  --poke-gold-soft: #FFF8D6;
+
+  --poke-indigo: #3B4CCA;
+  --poke-indigo-dark: #26339C;
+  --poke-indigo-soft: #EBEEFD;
+
+  --poke-green: #38B000;
+  --poke-green-dark: #257A00;
+  --poke-green-soft: #E9F9E2;
+
+  --poke-sky: #0EA5E9;
+  --poke-sky-dark: #0369A1;
+  --poke-sky-soft: #E0F2FE;
+
+  --poke-coral: #F43F5E;
+  --poke-purple: #8B5CF6;
+  --poke-amber: #F59E0B;
+
+  /* Pokémon Elemental Type Palette */
+  --type-grass: #38B000;
+  --type-poison: #9333EA;
+  --type-fire: #F97316;
+  --type-flying: #60A5FA;
+  --type-water: #0284C7;
+  --type-bug: #84CC16;
+  --type-electric: #EAB308;
+  --type-fairy: #EC4899;
+  --type-fighting: #DC2626;
+  --type-psychic: #DB2777;
+  --type-rock: #A16207;
+  --type-ground: #CA8A04;
+  --type-steel: #64748B;
+  --type-ghost: #6D28D9;
+  --type-ice: #06B6D4;
+  --type-normal: #78716C;
+  --type-dark: #334155;
+  --type-dragon: #4F46E5;
+
+  /* Typography — Rounded Storybook Stack */
+  --font-display: 'Nunito', 'Fredoka', 'Quicksand', 'Segoe UI Rounded', 'Trebuchet MS', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Nunito', 'Plus Jakarta Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Radii & Tactile Shadows */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --radius-pill: 9999px;
+
+  --shadow-card: 0 6px 20px rgba(72, 48, 22, 0.08), 0 1px 3px rgba(72, 48, 22, 0.06);
+  --shadow-floating: 0 14px 36px rgba(45, 30, 14, 0.16), 0 4px 10px rgba(45, 30, 14, 0.08);
+  --shadow-lip: 0 4px 0 rgba(30, 41, 59, 0.14);
+  --shadow-glow-gold: 0 0 0 3px rgba(255, 203, 5, 0.4), 0 6px 20px rgba(255, 203, 5, 0.35);
+  --shadow-glow-red: 0 0 0 3px rgba(227, 53, 13, 0.25), 0 6px 20px rgba(227, 53, 13, 0.25);
+
+  /* Layout Dimensions & Stacking */
+  --ribbon-h: 64px;
+  --left-rail-w: 290px;
+  --rotom-pane-w: 335px;
+  --mobile-nav-h: 72px;
+
+  --z-base: 1;
+  --z-sticky: 20;
+  --z-drawer-backdrop: 90;
+  --z-drawer: 100;
+  --z-ribbon: 110;
+  --z-modal: 200;
+  --z-toast: 300;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  background-color: var(--bg-canvas);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background-color: var(--bg-canvas);
+  background-image:
+    radial-gradient(circle at 12% 14%, rgba(255, 203, 5, 0.12), transparent 36%),
+    radial-gradient(circle at 88% 8%, rgba(227, 53, 13, 0.08), transparent 34%),
+    radial-gradient(circle at 50% 95%, rgba(59, 76, 202, 0.07), transparent 42%);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* Tabular Numbers Enforced on ALL Numeric Displays */
+.tabular-nums,
+[data-tabular="true"],
+.num-display,
+.hp-readout,
+.xp-readout,
+.coin-count,
+.stardust-count,
+.streak-count,
+.timer-readout,
+.equation-display,
+.keypad-display,
+.keypad-btn,
+.manip-readout,
+.quest-progress-text,
+.mastery-pct,
+.route-stars-count,
+.dex-number {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Accessible Focus Ring */
+:focus-visible {
+  outline: 3px solid var(--poke-indigo);
+  outline-offset: 2px;
+}
+
+/* Screen-reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Custom warm scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(231, 216, 195, 0.35);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(180, 152, 118, 0.55);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(145, 118, 86, 0.78);
+}
+
+/* Global Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+}
+
+[data-reduced-motion="true"] {
+  scroll-behavior: auto !important;
+}

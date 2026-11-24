@@ -1,0 +1,263 @@
+/* ============================================================================
+   PokéMath — 60fps GPU-Composited Animations & Reduced-Motion Guards
+   ============================================================================ */
+
+@keyframes buddyBob {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -5px, 0) scale(1.025);
+  }
+}
+
+@keyframes rotomFloat {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(-1deg);
+  }
+  50% {
+    transform: translate3d(0, -4px, 0) rotate(1.5deg);
+  }
+}
+
+@keyframes shinyTwinkle {
+  0%, 100% {
+    transform: scale(0.75) rotate(0deg);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1.15) rotate(18deg);
+    opacity: 1;
+  }
+}
+
+@keyframes badgePulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+@keyframes pokeballThrowArc {
+  0% {
+    transform: translate3d(-80px, 90px, 0) scale(0.85) rotate(0deg);
+    opacity: 0.9;
+  }
+  55% {
+    transform: translate3d(0, -48px, 0) scale(1.12) rotate(220deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(360deg);
+    opacity: 1;
+  }
+}
+
+@keyframes pokeballWobble {
+  0%, 100% {
+    transform: rotate(0deg) translate3d(0, 0, 0);
+  }
+  25% {
+    transform: rotate(-18deg) translate3d(-4px, 0, 0);
+  }
+  75% {
+    transform: rotate(18deg) translate3d(4px, 0, 0);
+  }
+}
+
+@keyframes evoSilhouettePulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: brightness(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.14);
+    filter: brightness(3.2) contrast(0.3);
+    opacity: 0.92;
+  }
+}
+
+@keyframes attackBurstScale {
+  0% {
+    transform: scale(0.35);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes floatTextUp {
+  0% {
+    transform: translate3d(-50%, 12px, 0) scale(0.85);
+    opacity: 0;
+  }
+  22% {
+    transform: translate3d(-50%, -8px, 0) scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(-50%, -56px, 0) scale(0.98);
+    opacity: 0;
+  }
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.8);
+    opacity: 1;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--tx, 60px), var(--ty, 180px), 0) rotate(var(--rot, 420deg)) scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes biomeFloat {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate3d(var(--px, 14px), var(--py, -16px), 0) scale(1.15);
+    opacity: 0.85;
+  }
+}
+
+@keyframes modalPopIn {
+  0% {
+    transform: translate3d(0, 12px, 0) scale(0.96);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes toastSlideIn {
+  0% {
+    transform: translate3d(20px, 0, 0) scale(0.96);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Applied Animation Classes */
+.pkmn-visual.is-animated {
+  animation: buddyBob 3.1s ease-in-out infinite;
+  will-change: transform;
+}
+
+.pkmn-shiny-star {
+  animation: shinyTwinkle 1.8s ease-in-out infinite;
+}
+
+.pkmn-shiny-star.star-2 {
+  animation-delay: 0.45s;
+}
+
+.pkmn-shiny-star.star-3 {
+  animation-delay: 0.9s;
+}
+
+.rotom-avatar-frame {
+  animation: rotomFloat 3.4s ease-in-out infinite;
+  will-change: transform;
+}
+
+.evo-meter-btn.is-ready,
+#mobile-hint-badge.is-pulsing {
+  animation: badgePulse 1.6s ease-in-out infinite;
+}
+
+.pokeball-throw-actor.is-throwing {
+  animation: pokeballThrowArc 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.pokeball-throw-actor.is-wobbling {
+  animation: pokeballWobble 0.55s ease-in-out infinite;
+}
+
+.evo-silhouette-flash {
+  animation: evoSilhouettePulse 0.9s ease-in-out infinite;
+}
+
+.vfx-attack-burst {
+  animation: attackBurstScale 0.72s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.vfx-floating-text {
+  animation: floatTextUp 0.92s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.vfx-confetti-piece {
+  animation: confettiFall 1.35s cubic-bezier(0.2, 0.8, 0.3, 1) var(--delay, 0s) forwards;
+}
+
+.biome-particle {
+  animation: biomeFloat var(--dur, 6s) ease-in-out var(--delay, 0s) infinite;
+}
+
+.pokenav-modal {
+  animation: modalPopIn 0.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.pokenav-toast {
+  animation: toastSlideIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ============================================================================
+   Full Reduced-Motion Compliance (OS Setting + In-App Toggle)
+   ============================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .pkmn-visual.is-animated,
+  .rotom-avatar-frame,
+  .evo-meter-btn.is-ready,
+  #mobile-hint-badge.is-pulsing,
+  .biome-particle,
+  .pkmn-shiny-star {
+    animation: none !important;
+  }
+}
+
+[data-reduced-motion="true"] *,
+[data-reduced-motion="true"] *::before,
+[data-reduced-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+[data-reduced-motion="true"] .pkmn-visual.is-animated,
+[data-reduced-motion="true"] .rotom-avatar-frame,
+[data-reduced-motion="true"] .evo-meter-btn.is-ready,
+[data-reduced-motion="true"] #mobile-hint-badge.is-pulsing,
+[data-reduced-motion="true"] .biome-particle,
+[data-reduced-motion="true"] .pkmn-shiny-star {
+  animation: none !important;
+}
