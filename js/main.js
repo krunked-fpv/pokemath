@@ -79,6 +79,8 @@ const STARTER_TIER_OPTIONS = [
 
 const AVATAR_SWATCHES = ['#E3350D', '#3B4CCA', '#38B000', '#F59E0B', '#EC4899', '#8B5CF6'];
 const SPEED_BLITZ_PACE_MS = 15000;
+const SPEED_BLITZ_BONUS_COINS = 2;
+const SPEED_BLITZ_BONUS_STARDUST = 2;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -137,12 +139,31 @@ function pickNextQuestTemplate(activeQuests, claimedQuest) {
   return templates[Math.floor(Math.random() * templates.length)];
 }
 
-function createSpeedBlitzBarController(hostEl) {
+/**
+ * Speed Blitz pace bar (single bar, owned by main.js) + the `context.speedBlitz` contract
+ * (SPEC.md §7 item 4). Modes call `consumeBonus()` on a correct answer and
+ * `resetForProblem()` when a fresh problem appears; the bar itself awards the
+ * +2 Coins / +2 Stardust bonus, so modes never pay it (or render a timer) themselves.
+ */
+function createSpeedBlitzBarController(hostEl, deps = {}) {
+  const getProfile = typeof deps.getProfile === 'function' ? deps.getProfile : () => null;
+  const awardBonus = typeof deps.awardBonus === 'function' ? deps.awardBonus : () => false;
+  const onBonusGranted = typeof deps.onBonusGranted === 'function' ? deps.onBonusGranted : null;
+
   let timerId = null;
-  let active = false;
-  let remainingMs = SPEED_BLITZ_PACE_MS;
+  let enabled = false; // profile.settings.speedBlitz
+  let visible = false; // enabled AND on a math screen (hidden on Camp / Pokédex / ceremony)
+  let deadline = 0; // epoch ms when the bonus window closes
+  let bonusConsumed = false;
+  let modeManaged = false; // true once the mounted mode calls resetForProblem()
   let lastSolvedCount = 0;
   let lastAttemptCount = 0;
+  let lastLabel = '';
+  let lastPct = -1;
+
+  function remainingMs() {
+    return Math.max(0, deadline - Date.now());
+  }
 
   function stopTimer() {
     if (timerId !== null) {
@@ -152,32 +173,40 @@ function createSpeedBlitzBarController(hostEl) {
   }
 
   function updateVisuals() {
-    if (!hostEl || !active) return;
+    if (!hostEl || !visible) return;
     const fillEl = hostEl.querySelector('[data-blitz-fill]');
     const labelEl = hostEl.querySelector('[data-blitz-status]');
-    const pct = Math.max(0, Math.min(100, Math.round((remainingMs / SPEED_BLITZ_PACE_MS) * 100)));
-    if (fillEl) {
+    const left = remainingMs();
+    const live = !bonusConsumed && left > 0;
+    const pct = bonusConsumed ? 100 : Math.max(0, Math.min(100, Math.round((left / SPEED_BLITZ_PACE_MS) * 100)));
+    if (fillEl && pct !== lastPct) {
+      lastPct = pct;
       fillEl.style.width = `${pct}%`;
-      fillEl.style.background =
-        remainingMs > 0
-          ? 'linear-gradient(90deg, var(--poke-green), var(--poke-gold))'
-          : 'linear-gradient(90deg, var(--poke-sky), var(--poke-indigo))';
+      fillEl.style.background = live || bonusConsumed
+        ? 'linear-gradient(90deg, var(--poke-green), var(--poke-gold))'
+        : 'linear-gradient(90deg, var(--poke-sky), var(--poke-indigo))';
     }
     if (labelEl) {
-      labelEl.textContent =
-        remainingMs > 0
-          ? `${Math.ceil(remainingMs / 1000)}s Bonus Spark`
+      const label = bonusConsumed
+        ? 'Bonus collected! +2 🪙 +2 ✨'
+        : live
+          ? `${Math.ceil(left / 1000)}s Bonus Spark`
           : 'Take your time — full XP ready!';
+      if (label !== lastLabel) {
+        lastLabel = label;
+        labelEl.textContent = label;
+      }
     }
   }
 
   function ensureMarkup() {
-    if (!hostEl) return;
-    if (hostEl.querySelector('[data-speed-blitz-bar]')) return;
+    if (!hostEl || hostEl.querySelector('[data-speed-blitz-bar]')) return;
+    lastLabel = '';
+    lastPct = -1;
     hostEl.innerHTML = `
       <div data-speed-blitz-bar style="display:flex;flex-direction:column;gap:5px;padding:8px 12px;border-radius:var(--radius-md);background:var(--bg-glass);border:2px solid var(--border-warm);box-shadow:var(--shadow-card);">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:0.78rem;font-weight:800;color:var(--text-secondary);">
-          <span>⚡ Speed Blitz Pace <span style="font-weight:700;color:var(--text-muted);">(bonus stardust pace — zero penalty)</span></span>
+          <span>⚡ Speed Blitz Pace <span style="font-weight:700;color:var(--text-muted);">(bonus coins &amp; stardust — zero penalty)</span></span>
           <span data-blitz-status class="tabular-nums" style="color:var(--poke-indigo-dark);font-weight:900;">15s Bonus Spark</span>
         </div>
         <div class="meter-track" style="height:8px;">
@@ -187,70 +216,120 @@ function createSpeedBlitzBarController(hostEl) {
     `;
   }
 
-  function startPulse() {
+  function hideBar() {
+    visible = false;
     stopTimer();
-    if (!active) return;
-    remainingMs = SPEED_BLITZ_PACE_MS;
+    if (hostEl) {
+      hostEl.innerHTML = '';
+      hostEl.style.display = 'none';
+    }
+    lastLabel = '';
+    lastPct = -1;
+  }
+
+  function startWindow() {
+    stopTimer();
+    deadline = Date.now() + SPEED_BLITZ_PACE_MS;
+    bonusConsumed = false;
+    if (!visible) return;
     ensureMarkup();
+    lastPct = -1;
     updateVisuals();
     timerId = setInterval(() => {
-      if (!active) {
+      if (!visible) {
         stopTimer();
         return;
       }
-      remainingMs = Math.max(0, remainingMs - 250);
       updateVisuals();
-      if (remainingMs <= 0) {
-        stopTimer();
-      }
+      if (remainingMs() <= 0) stopTimer();
     }, 250);
   }
 
-  function sync(profile) {
-    if (!hostEl) return;
-    const enabled = Boolean(profile?.settings?.speedBlitz);
-    if (!enabled) {
-      active = false;
-      stopTimer();
-      hostEl.innerHTML = '';
-      hostEl.style.display = 'none';
+  /** Applies profile settings + screen kind; (re)starts the window only when the bar first appears. */
+  function sync(profile, { mathScreen = true } = {}) {
+    enabled = Boolean(profile?.settings?.speedBlitz);
+    if (!enabled || !mathScreen) {
+      hideBar();
       return;
     }
 
     const nextSolved = Number(profile.totalSolved) || 0;
     const nextAttempts = Number(profile.totalAttempts) || 0;
-    const shouldReset = !active || nextSolved !== lastSolvedCount || nextAttempts !== lastAttemptCount;
+    // Modes that predate resetForProblem() still get a fresh window after each answer.
+    const counterReset = !modeManaged && (nextSolved !== lastSolvedCount || nextAttempts !== lastAttemptCount);
     lastSolvedCount = nextSolved;
     lastAttemptCount = nextAttempts;
 
-    active = true;
+    const wasVisible = visible;
+    visible = true;
     hostEl.style.display = 'block';
-    if (shouldReset) {
-      startPulse();
+    if (!wasVisible || counterReset) {
+      startWindow();
     } else {
       ensureMarkup();
       updateVisuals();
     }
   }
 
-  function resetPulse(profile) {
-    if (!profile?.settings?.speedBlitz) {
-      sync(null);
-      return;
+  /** Called by navigate() before a mode mounts: fresh window, mode not yet in charge of pacing. */
+  function beginMode(profile, { mathScreen = true } = {}) {
+    modeManaged = false;
+    lastSolvedCount = Number(profile?.totalSolved) || 0;
+    lastAttemptCount = Number(profile?.totalAttempts) || 0;
+    sync(profile, { mathScreen });
+    if (visible) startWindow();
+  }
+
+  function isEnabled() {
+    return Boolean(getProfile()?.settings?.speedBlitz);
+  }
+
+  function isBonusActive() {
+    return isEnabled() && visible && !bonusConsumed && remainingMs() > 0;
+  }
+
+  /** Awards +2 Coins & +2 Stardust once per problem while the window is open. Never penalizes. */
+  function consumeBonus() {
+    if (!isBonusActive()) return false;
+    bonusConsumed = true;
+    stopTimer();
+    let granted = false;
+    try {
+      granted = Boolean(awardBonus());
+    } catch {
+      granted = false;
     }
-    lastSolvedCount = Number(profile.totalSolved) || 0;
-    lastAttemptCount = Number(profile.totalAttempts) || 0;
-    active = true;
-    hostEl.style.display = 'block';
-    startPulse();
+    updateVisuals();
+    if (granted && onBonusGranted) onBonusGranted();
+    return granted;
+  }
+
+  /** Called by modes whenever a brand-new problem appears. */
+  function resetForProblem() {
+    modeManaged = true;
+    const profile = getProfile();
+    lastSolvedCount = Number(profile?.totalSolved) || 0;
+    lastAttemptCount = Number(profile?.totalAttempts) || 0;
+    if (!isEnabled()) {
+      hideBar();
+      return false;
+    }
+    if (!visible) return false; // Camp / Pokédex / ceremony: no pacing window
+    startWindow();
+    return true;
   }
 
   function destroy() {
-    active = false;
     stopTimer();
+    visible = false;
   }
 
-  return { sync, resetPulse, destroy };
+  return {
+    sync,
+    beginMode,
+    destroy,
+    api: { isEnabled, isBonusActive, consumeBonus, resetForProblem }
+  };
 }
 
 let _lastBootInstance = null;
@@ -304,8 +383,6 @@ export function bootApp() {
     });
   }
 
-  const speedBlitzBar = createSpeedBlitzBarController(speedBlitzHostEl);
-
   let currentModeId = 'battle';
   let currentRouteId = 'route-1';
   let activeController = null;
@@ -315,6 +392,45 @@ export function bootApp() {
   let knownProfileId = state.getActiveProfile()?.id || null;
   let lastFilterSignature = getFilterSignature(state.getActiveProfile());
   let lastAudioConfig = { sfx: null, ambient: null, speech: null };
+  let lastChromeKey = null;
+  let lastModeSwitcherKey = null;
+
+  // Single Speed Blitz bar; its `.api` is handed to every mode as context.speedBlitz.
+  const speedBlitzBar = createSpeedBlitzBarController(speedBlitzHostEl, {
+    getProfile: () => state.getActiveProfile(),
+    awardBonus() {
+      const updated = state.updateProfile((draft) => {
+        draft.coins = (Number(draft.coins) || 0) + SPEED_BLITZ_BONUS_COINS;
+        draft.stardust = (Number(draft.stardust) || 0) + SPEED_BLITZ_BONUS_STARDUST;
+      });
+      return Boolean(updated);
+    },
+    onBonusGranted() {
+      audio.playClick?.('select');
+      vfx.spawnFloatingText?.(stageContentEl, `+${SPEED_BLITZ_BONUS_COINS} 🪙 +${SPEED_BLITZ_BONUS_STARDUST} ✨ Speed Blitz!`, 'coins');
+      shell?.showToast?.(`⚡ Speed Blitz! +${SPEED_BLITZ_BONUS_COINS} Coins & +${SPEED_BLITZ_BONUS_STARDUST} Stardust`, 'success');
+    }
+  });
+
+  const isMathScreen = (modeId) => modeId !== 'camp';
+
+  /**
+   * Paints ribbon / left rail / mobile nav + Rotom-Dex once per distinct (route, state) snapshot,
+   * so back-to-back notifications (state subscriber + shell callbacks) never re-render twice.
+   */
+  function renderChrome(rootState, profile, { force = false } = {}) {
+    let key = null;
+    try {
+      key = `${currentRouteId}|${JSON.stringify(rootState ?? null)}`;
+    } catch {
+      key = null;
+    }
+    if (!force && key !== null && key === lastChromeKey) return false;
+    lastChromeKey = key;
+    shell.render(rootState, currentRouteId);
+    rotomPane.render(profile ?? null);
+    return true;
+  }
 
   function syncAudioSettingsIfChanged(profileSettings) {
     if (!profileSettings) return;
@@ -375,8 +491,6 @@ export function bootApp() {
       if (rewardEarned > 0 && updated) {
         audio.playCorrectChime(3);
         shell.showToast(`Quest cleared: ${claimedTitle}! +${rewardEarned} ✨ Stardust!`, 'success');
-        shell.render(state.getState(), currentRouteId);
-        rotomPane.render(updated);
         rotomPane.setMood('cheering', `Bzzzt! +${rewardEarned} Stardust! Fresh quest loaded!`);
       }
     },
@@ -407,6 +521,18 @@ export function bootApp() {
     if (!modeSwitcherEl) return;
     modeSwitcherEl.style.display = '';
     modeSwitcherEl.removeAttribute('aria-hidden');
+    const existingTabs = modeSwitcherEl.querySelectorAll?.('[data-mode-id]');
+    if (existingTabs && existingTabs.length === MODES.length) {
+      if (lastModeSwitcherKey === activeModeId) return;
+      existingTabs.forEach((tab) => {
+        const isActive = tab.dataset.modeId === activeModeId;
+        tab.classList.toggle('is-active', isActive);
+        tab.setAttribute('aria-current', isActive ? 'page' : 'false');
+      });
+      lastModeSwitcherKey = activeModeId;
+      return;
+    }
+    lastModeSwitcherKey = activeModeId;
     modeSwitcherEl.innerHTML = MODES.map((m) => {
       const isActive = m.id === activeModeId;
       return `
@@ -440,10 +566,11 @@ export function bootApp() {
       modeSwitcherEl.setAttribute('aria-hidden', 'true');
       modeSwitcherEl.innerHTML = '';
     }
+    lastModeSwitcherKey = null;
 
     speedBlitzBar.sync(null);
-    shell.render(state.getState(), 'route-1');
-    rotomPane.render(null);
+    currentRouteId = 'route-1';
+    renderChrome(state.getState(), null, { force: true });
     rotomPane.setMood('curious', 'Bzzzt! Your math journey is about to unfold! Pick a Kanto Starter!');
 
     const starterIds = Array.isArray(pokemonData.STARTER_IDS) && pokemonData.STARTER_IDS.length > 0
@@ -568,7 +695,7 @@ export function bootApp() {
 
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-top:4px;">
             <span style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);">
-              Includes your Classic Trainer Cap &amp; auto-synced <code>krunked-cookie-vault-v1</code> save!
+              Includes your Classic Trainer Cap &amp; automatic save protection!
             </span>
             <button type="submit" id="begin-adventure-btn" class="btn-3d btn-primary btn-touch" style="min-height:54px;padding:12px 24px;font-size:1.06rem;">
               Begin Adventure! →
@@ -686,10 +813,10 @@ export function bootApp() {
     currentModeId = modeEntry.id;
 
     renderModeSwitcher(currentModeId);
-    shell.render(state.getState(), currentRouteId);
-    rotomPane.render(profile);
-    speedBlitzBar.sync(profile);
+    renderChrome(state.getState(), profile);
     syncAudioSettingsIfChanged(profile.settings);
+    // Fresh pacing window (hidden on Camp / Pokédex); the mounting mode may restart it per problem.
+    speedBlitzBar.beginMode(profile, { mathScreen: isMathScreen(currentModeId) });
 
     const modeParams = {
       ...(params || {}),
@@ -710,13 +837,13 @@ export function bootApp() {
       routesData,
       itemsData,
       onNavigate: navigate,
+      speedBlitz: speedBlitzBar.api,
       modeParams
     };
 
     stageContentEl.scrollTop = 0;
     activeController = modeEntry.controller;
     activeController.mount(stageContentEl, context);
-    speedBlitzBar.resetPulse(profile);
   }
 
   const shell = createShell(
@@ -748,7 +875,6 @@ export function bootApp() {
       onFilterChange(updatedProfile) {
         if (!updatedProfile) return;
         syncAudioSettingsIfChanged(updatedProfile.settings);
-        speedBlitzBar.sync(updatedProfile);
         const nextSig = getFilterSignature(updatedProfile);
         if (nextSig !== lastFilterSignature) {
           lastFilterSignature = nextSig;
@@ -757,7 +883,8 @@ export function bootApp() {
             return;
           }
         }
-        rotomPane.render(updatedProfile);
+        speedBlitzBar.sync(updatedProfile, { mathScreen: isMathScreen(currentModeId) });
+        renderChrome(state.getState(), updatedProfile);
       },
       onProfileChanged(activeProfile) {
         if (!activeProfile) {
@@ -825,13 +952,10 @@ export function bootApp() {
   const unsubscribeState = state.subscribe((rootState, activeProfile) => {
     if (isRoutingProfileChange) return;
 
-    shell.render(rootState, currentRouteId);
-    rotomPane.render(activeProfile);
-    speedBlitzBar.sync(activeProfile);
-
     if (activeProfile) {
       syncAudioSettingsIfChanged(activeProfile.settings);
       if (knownProfileId !== activeProfile.id) {
+        // Profile switch: navigate() renders the chrome itself, so skip the pre-render.
         knownProfileId = activeProfile.id;
         lastFilterSignature = getFilterSignature(activeProfile);
         currentRouteId = resolveValidRouteId(activeProfile, currentRouteId);
@@ -840,13 +964,19 @@ export function bootApp() {
           navigatedThisTick = false;
         });
         navigate('battle', { routeId: currentRouteId });
+        return;
       }
+      renderChrome(rootState, activeProfile);
+      speedBlitzBar.sync(activeProfile, { mathScreen: isMathScreen(currentModeId) });
     } else if (knownProfileId !== null || !stageContentEl.querySelector('.starter-ceremony-overlay')) {
       navigatedThisTick = true;
       queueMicrotask(() => {
         navigatedThisTick = false;
       });
-      renderStarterCeremony();
+      renderStarterCeremony(); // renders the chrome itself
+    } else {
+      renderChrome(rootState, null);
+      speedBlitzBar.sync(null);
     }
   });
 
@@ -874,6 +1004,17 @@ export function bootApp() {
     if (activeController && typeof activeController.handleKey === 'function') {
       if (activeController.handleKey(event) === true) {
         event.preventDefault();
+        return;
+      }
+    }
+
+    if ((event.key === 'r' || event.key === 'R') && !event.repeat && state.getActiveProfile()) {
+      // Read the active prompt (plus open Tier 1 clue) aloud via the Rotom-Dex read-aloud button.
+      const readBtn = rotomEl.querySelector('#rotom-read-aloud-btn');
+      if (readBtn) {
+        event.preventDefault();
+        audio.unlockAudio();
+        readBtn.click();
         return;
       }
     }
