@@ -112,6 +112,7 @@ let _env = {
 let _state = createEmptyRootState();
 let _initialized = false;
 let _idCounter = 0;
+let _lastHealSource = null;
 const _subscribers = new Set();
 
 function isPlainObject(value) {
@@ -1256,6 +1257,14 @@ function ensureInitialized() {
   }
 }
 
+function writeCurrentCookieVault() {
+  if (!_env.cookieDoc) {
+    return false;
+  }
+  const encoded = buildCompactVaultEncoded(_state);
+  return writeVaultCookieRaw(_env.cookieDoc, encoded, _env.protocol);
+}
+
 function persistBoth() {
   writeStorageState(_state);
   syncCookieVault();
@@ -1278,6 +1287,7 @@ function notifySubscribers() {
 // ============================================================================
 
 export function initState(env = {}) {
+  _lastHealSource = null;
   _env = {
     storage: Object.hasOwn(env, 'storage') ? env.storage : safeGetGlobalStorage(),
     cookieDoc: Object.hasOwn(env, 'cookieDoc') ? env.cookieDoc : safeGetGlobalDocument(),
@@ -1295,22 +1305,29 @@ export function initState(env = {}) {
     const cookieTs = computeStateTimestamp(cookieState);
     if (cookieTs > storageTs) {
       _state = cookieState;
+      _initialized = true;
+      _lastHealSource = 'cookie-vault';
       writeStorageState(_state);
     } else {
       _state = storageState;
-      syncCookieVault();
+      _initialized = true;
+      writeCurrentCookieVault();
     }
   } else if (!storageState && cookieState) {
     _state = cookieState;
+    _initialized = true;
+    _lastHealSource = 'cookie-vault';
     writeStorageState(_state);
   } else if (storageState && !cookieState) {
     _state = storageState;
-    syncCookieVault();
+    _initialized = true;
+    _lastHealSource = 'storage-regenerated';
+    writeCurrentCookieVault();
   } else {
     _state = createEmptyRootState(0);
+    _initialized = true;
   }
 
-  _initialized = true;
   return getState();
 }
 
@@ -1549,6 +1566,10 @@ export function importSaveJSON(raw) {
   };
 }
 
+export function getLastHealSource() {
+  return _lastHealSource;
+}
+
 export function healFromCookieVault() {
   if (!_initialized) {
     _env = {
@@ -1572,9 +1593,5 @@ export function healFromCookieVault() {
 
 export function syncCookieVault() {
   ensureInitialized();
-  if (!_env.cookieDoc) {
-    return false;
-  }
-  const encoded = buildCompactVaultEncoded(_state);
-  return writeVaultCookieRaw(_env.cookieDoc, encoded, _env.protocol);
+  return writeCurrentCookieVault();
 }
