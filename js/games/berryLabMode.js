@@ -167,24 +167,14 @@ const LAB_CSS = `
   color: #0f172a;
   margin: 6px 0 0;
 }
-.pm-lab-speak-btn {
-  min-height: 44px;
-  padding: 8px 14px;
-  border-radius: 12px;
-  border: 2px solid #cbd5e1;
-  border-bottom-width: 4px;
-  background: #f8fafc;
-  color: #1e293b;
-  font-weight: 700;
-  cursor: pointer;
-}
+.pm-lab-speak-btn { min-height: 44px; }
 .pm-lab-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
   gap: 14px;
   align-items: start;
 }
-.pm-cauldron-box {
+.pm-lab-cauldron-box {
   background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
   border: 2px solid #fed7aa;
   border-radius: 18px;
@@ -193,7 +183,7 @@ const LAB_CSS = `
   flex-direction: column;
   gap: 12px;
 }
-.pm-cauldron-pot {
+.pm-lab-cauldron-pot {
   position: relative;
   min-height: 126px;
   border-radius: 18px;
@@ -207,7 +197,7 @@ const LAB_CSS = `
   justify-content: center;
   gap: 8px;
 }
-.pm-cauldron-bubbles {
+.pm-lab-cauldron-bubbles {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -215,7 +205,7 @@ const LAB_CSS = `
   max-height: 62px;
   overflow: hidden;
 }
-.pm-cauldron-chip {
+.pm-lab-cauldron-chip {
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -225,18 +215,18 @@ const LAB_CSS = `
   font-size: 0.78rem;
   font-weight: 800;
 }
-.pm-cauldron-total {
+.pm-lab-cauldron-total {
   font-size: 1.55rem;
   font-weight: 900;
   color: #ffcb05;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
 }
-.pm-berry-tray {
+.pm-lab-berry-tray {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
-.pm-berry-btn {
+.pm-lab-berry-btn {
   min-height: 58px;
   padding: 6px;
   border-radius: 14px;
@@ -253,104 +243,38 @@ const LAB_CSS = `
   font-size: 0.82rem;
   color: #1e293b;
 }
-.pm-berry-btn svg { width: 26px; height: 26px; }
-.pm-berry-btn:active { transform: translateY(2px); }
-.pm-input-panel {
+.pm-lab-berry-btn svg { width: 26px; height: 26px; }
+.pm-lab-berry-btn:active { transform: translateY(2px); }
+.pm-lab-input-panel {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-.pm-choices-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-.pm-choice-tile {
-  min-height: 54px;
-  padding: 10px;
-  border-radius: 14px;
-  border: 2px solid #cbd5e1;
-  border-bottom-width: 5px;
-  background: #ffffff;
-  color: #0f172a;
-  font-size: 1.15rem;
-  font-weight: 800;
-  cursor: pointer;
-  transition: transform 0.1s ease, border-color 0.15s ease;
-}
-.pm-choice-tile:hover { border-color: #3b4cca; transform: translateY(-1px); }
-.pm-choice-tile.is-picked { border-color: #3b4cca; background: #eff6ff; }
-.pm-keypad-display {
-  min-height: 48px;
-  border-radius: 12px;
-  background: #0f172a;
-  color: #ffcb05;
+.pm-lab-choices-grid { margin: 0; }
+.pm-lab-keypad { max-width: none; }
+.pm-lab-keypad-display {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
-  font-size: 1.35rem;
-  font-weight: 900;
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffcb05;
+  text-align: left;
 }
-.pm-keypad-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-.pm-key-btn {
-  min-height: 46px;
-  border-radius: 12px;
-  border: 2px solid #cbd5e1;
-  border-bottom-width: 4px;
-  background: #ffffff;
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #1e293b;
-  cursor: pointer;
-}
-.pm-btn-primary {
-  min-height: 52px;
-  padding: 10px 18px;
-  border-radius: 14px;
-  border: 2px solid #15803d;
-  border-bottom-width: 5px;
-  background: #38b000;
-  color: #ffffff;
-  font-size: 1rem;
-  font-weight: 900;
-  cursor: pointer;
-}
-.pm-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.pm-btn-secondary {
-  min-height: 46px;
-  padding: 8px 14px;
-  border-radius: 12px;
-  border: 2px solid #cbd5e1;
-  border-bottom-width: 4px;
-  background: #ffffff;
-  color: #334155;
-  font-weight: 800;
-  cursor: pointer;
-}
-.pm-feedback {
-  padding: 12px 14px;
-  border-radius: 14px;
-  font-weight: 700;
-  display: flex;
+.pm-lab-keypad-label { font-size: 0.78rem; color: #94a3b8; font-weight: 700; }
+.pm-lab-submit { width: 100%; min-height: 52px; font-size: 1rem; }
+.pm-lab-feedback {
   flex-wrap: wrap;
-  align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
-.pm-feedback.is-good { background: #dcfce7; border: 2px solid #86efac; color: #166534; }
-.pm-feedback.is-nudge { background: #fef3c7; border: 2px solid #fcd34d; color: #92400e; }
-.pm-array-mode-bar {
+.pm-lab-mode-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 10px;
 }
-.pm-garden-grid {
+.pm-lab-garden-grid {
   display: grid;
   gap: 5px;
   padding: 12px;
@@ -360,7 +284,7 @@ const LAB_CSS = `
   max-width: 100%;
   overflow-x: auto;
 }
-.pm-plot-cell {
+.pm-lab-plot-cell {
   min-width: 34px;
   min-height: 38px;
   border-radius: 10px;
@@ -373,17 +297,17 @@ const LAB_CSS = `
   font-size: 1.05rem;
   transition: transform 0.1s ease, background-color 0.12s ease;
 }
-.pm-plot-cell.is-planted {
+.pm-lab-plot-cell.is-planted {
   background: #fde047;
   border-color: #eab308;
   transform: scale(1.03);
 }
-.pm-baskets-grid {
+.pm-lab-baskets-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
   gap: 8px;
 }
-.pm-basket-card {
+.pm-lab-basket-card {
   min-height: 82px;
   border-radius: 14px;
   border: 2px solid #d97706;
@@ -398,12 +322,12 @@ const LAB_CSS = `
   gap: 4px;
   font-weight: 800;
 }
-.pm-coin-tray {
+.pm-lab-coin-tray {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
-.pm-coin-btn {
+.pm-lab-coin-btn {
   min-width: 58px;
   min-height: 58px;
   border-radius: 999px;
@@ -418,7 +342,7 @@ const LAB_CSS = `
   align-items: center;
   justify-content: center;
 }
-.pm-counter-coins {
+.pm-lab-counter-coins {
   min-height: 58px;
   border-radius: 14px;
   border: 2px dashed #cbd5e1;
@@ -429,7 +353,7 @@ const LAB_CSS = `
   align-items: center;
   gap: 6px;
 }
-.pm-placed-coin {
+.pm-lab-placed-coin {
   padding: 4px 10px;
   border-radius: 999px;
   background: #fef08a;
@@ -439,13 +363,13 @@ const LAB_CSS = `
   font-size: 0.85rem;
   cursor: pointer;
 }
-.pm-mart-grid {
+.pm-lab-mart-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
   gap: 10px;
   margin-top: 10px;
 }
-.pm-mart-item {
+.pm-lab-mart-item {
   border: 2px solid #e2e8f0;
   border-radius: 16px;
   padding: 12px;
@@ -455,12 +379,12 @@ const LAB_CSS = `
   justify-content: space-between;
   gap: 8px;
 }
-.pm-mart-item-head {
+.pm-lab-mart-item-head {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.pm-mart-icon {
+.pm-lab-mart-icon {
   width: 44px;
   height: 44px;
   flex-shrink: 0;
@@ -472,13 +396,13 @@ const LAB_CSS = `
   justify-content: center;
   padding: 4px;
 }
-.pm-mart-icon svg { width: 100%; height: 100%; }
-.pm-mart-cats {
+.pm-lab-mart-icon svg { width: 100%; height: 100%; }
+.pm-lab-mart-cats {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
-.pm-cat-pill {
+.pm-lab-cat-pill {
   min-height: 38px;
   padding: 6px 12px;
   border-radius: 999px;
@@ -488,7 +412,7 @@ const LAB_CSS = `
   font-size: 0.82rem;
   cursor: pointer;
 }
-.pm-cat-pill.is-active {
+.pm-lab-cat-pill.is-active {
   background: #3b4cca;
   border-color: #1e3a8a;
   color: #ffffff;
@@ -498,11 +422,11 @@ const LAB_CSS = `
   .pm-lab-workspace { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pm-lab-tab, .pm-choice-tile, .pm-plot-cell { transition: none !important; }
+  .pm-lab-tab, .pm-lab-choice-tile, .pm-lab-plot-cell { transition: none !important; }
 }
 [data-reduced-motion="true"] .pm-lab-tab,
-[data-reduced-motion="true"] .pm-choice-tile,
-[data-reduced-motion="true"] .pm-plot-cell { transition: none !important; }
+[data-reduced-motion="true"] .pm-lab-choice-tile,
+[data-reduced-motion="true"] .pm-lab-plot-cell { transition: none !important; }
 `;
 
 let _container = null;
@@ -606,28 +530,43 @@ function applyQuestProgress(draft, increments) {
 
 function buildCheckoutProblem(tier, mode, itemsData, customFilter) {
   const catalog = (itemsData.MART_CATALOG || []).filter((item) => item.category !== 'accessory');
-  const pool = catalog.length > 0 ? catalog : [{ name: 'Oran Berry', costCoins: 1 }];
-  const pickItem = () => pool[Math.floor(Math.random() * pool.length)];
+  const pool = catalog.length > 0 ? catalog : [{ id: 'oran', name: 'Oran Berry', costCoins: 1 }];
+  const idOf = (item) => String(item.id || item.itemId || item.name);
+  const randInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
+  const pickFrom = (list) => list[Math.floor(Math.random() * list.length)];
 
   let maxCost = tier === 'starter' ? 20 : tier === 'explorer' ? 95 : tier === 'ace' ? 180 : 300;
   if (customFilter?.enabled && Number(customFilter.maxNumber) > 0) {
     maxCost = Math.max(2, Math.min(maxCost, Math.floor(Number(customFilter.maxNumber))));
   }
-  let itemA = pickItem();
-  let itemB = pickItem();
-  let qtyA = tier === 'starter' ? 1 : Math.floor(Math.random() * 2) + 1;
-  let qtyB = 1;
 
-  while (itemA.costCoins * qtyA + itemB.costCoins * qtyB > maxCost) {
-    if (qtyA > 1) qtyA = 1;
-    else {
-      itemA = pool[0];
-      itemB = pool[Math.min(1, pool.length - 1)];
-      break;
+  // Two DIFFERENT items per checkout; the same item is never listed twice.
+  let lines = null;
+  for (let attempt = 0; attempt < 24 && !lines; attempt += 1) {
+    const itemA = pickFrom(pool);
+    const others = pool.filter((entry) => idOf(entry) !== idOf(itemA) && entry.name !== itemA.name);
+    if (others.length === 0) break;
+    const itemB = pickFrom(others);
+    const qtyA = tier === 'starter' ? 1 : randInt(1, 2);
+    if (itemA.costCoins * qtyA + itemB.costCoins <= maxCost) {
+      lines = [{ item: itemA, qty: qtyA }, { item: itemB, qty: 1 }];
+    }
+  }
+  if (!lines) {
+    const cheapest = [...pool].sort((a, b) => a.costCoins - b.costCoins);
+    const second = cheapest.find((entry) => idOf(entry) !== idOf(cheapest[0]) && entry.name !== cheapest[0].name);
+    if (second && cheapest[0].costCoins + second.costCoins <= maxCost) {
+      lines = [{ item: cheapest[0], qty: 1 }, { item: second, qty: 1 }];
+    } else {
+      // Single-item shelf (or tiny budget): merge duplicates into ONE line with a summed quantity.
+      const unit = Math.max(1, cheapest[0].costCoins);
+      const qty = Math.max(2, Math.min(4, Math.floor(maxCost / unit)));
+      lines = [{ item: cheapest[0], qty }];
     }
   }
 
-  const totalCost = Math.max(2, Math.min(maxCost, itemA.costCoins * qtyA + itemB.costCoins * qtyB));
+  const lineCost = (line) => line.item.costCoins * line.qty;
+  const totalCost = lines.reduce((sum, line) => sum + lineCost(line), 0);
   const useChange = mode === 'change';
 
   let paidAmount = totalCost;
@@ -638,7 +577,13 @@ function buildCheckoutProblem(tier, mode, itemsData, customFilter) {
   let leftExpr;
   let operation = 'word';
   let skillTag = 'mart_exact_checkout';
-  let operands = [itemA.costCoins * qtyA, itemB.costCoins * qtyB];
+  let operands = lines.length > 1
+    ? lines.map(lineCost)
+    : [lines[0].qty, lines[0].item.costCoins];
+
+  const coinWord = (n) => (n === 1 ? 'coin' : 'coins');
+  const buyList = lines.map((line) => `${line.qty}× ${line.item.name} (${line.item.costCoins}c${useChange ? '' : ' each'})`).join(' and ');
+  const spokenList = lines.map((line) => `${line.qty} ${line.item.name} at ${line.item.costCoins} ${coinWord(line.item.costCoins)}`).join(' and ');
 
   if (useChange) {
     const bills = [10, 20, 25, 50, 100, 150, 200, 350];
@@ -647,15 +592,20 @@ function buildCheckoutProblem(tier, mode, itemsData, customFilter) {
     operation = 'sub';
     skillTag = 'mart_change_checkout';
     operands = [paidAmount, totalCost];
-    promptText = `Customer buys ${qtyA}× ${itemA.name} (${itemA.costCoins}c) and ${qtyB}× ${itemB.name} (${itemB.costCoins}c) for ${totalCost} Coins total, and pays with ${paidAmount} Coins. How much change should you give back?`;
-    spokenPrompt = `Total is ${totalCost} Coins. Customer pays ${paidAmount} Coins. How much change should you give back?`;
+    promptText = `Customer buys ${buyList} for ${totalCost} Coins total, and pays with ${paidAmount} Coins. How much change should you give back?`;
+    spokenPrompt = `Total is ${totalCost} ${coinWord(totalCost)}. Customer pays ${paidAmount} ${coinWord(paidAmount)}. How much change should you give back?`;
     expression = `${paidAmount} - ${totalCost} = ?`;
     leftExpr = `${paidAmount} - ${totalCost}`;
+  } else if (lines.length === 1) {
+    promptText = `Ring up ${buyList}. Place the exact Poké-Coins in the tray!`;
+    spokenPrompt = `Ring up ${spokenList} each.`;
+    expression = `${lines[0].qty} × ${lines[0].item.costCoins} = ?`;
+    leftExpr = `${lines[0].qty} × ${lines[0].item.costCoins}`;
   } else {
-    promptText = `Ring up ${qtyA}× ${itemA.name} (${itemA.costCoins}c each) + ${qtyB}× ${itemB.name} (${itemB.costCoins}c each). Place the exact Poké-Coins in the tray!`;
-    spokenPrompt = `Add ${qtyA} ${itemA.name} at ${itemA.costCoins} coins and ${qtyB} ${itemB.name} at ${itemB.costCoins} coins.`;
-    expression = `${itemA.costCoins * qtyA} + ${itemB.costCoins * qtyB} = ?`;
-    leftExpr = `${itemA.costCoins * qtyA} + ${itemB.costCoins * qtyB}`;
+    promptText = `Ring up ${buyList.replaceAll(' and ', ' + ')}. Place the exact Poké-Coins in the tray!`;
+    spokenPrompt = `Add ${spokenList}.`;
+    expression = `${operands.join(' + ')} = ?`;
+    leftExpr = operands.join(' + ');
   }
 
   // Build 4 unique non-negative choices
@@ -693,10 +643,11 @@ function buildCheckoutProblem(tier, mode, itemsData, customFilter) {
       storyItems: 'Poké-Coins',
       whole: useChange ? paidAmount : totalCost,
       parts: useChange ? [totalCost, answer] : operands,
-      checkoutItems: [
-        { name: itemA.name, qty: qtyA, unitCost: itemA.costCoins },
-        { name: itemB.name, qty: qtyB, unitCost: itemB.costCoins }
-      ],
+      checkoutItems: lines.map((line) => ({
+        name: line.item.name,
+        qty: line.qty,
+        unitCost: line.item.costCoins
+      })),
       paidAmount,
       totalCost
     }
@@ -725,18 +676,22 @@ function loadNewStationProblem() {
     });
   } else if (_station === 'arrays') {
     if (_arrayOp === 'div') {
-      _problem = mathEngine.generateProblem({
-        tier,
-        operation: 'div',
-        format: 'numeric',
-        customFilter: {
-          enabled: true,
-          operations: ['div'],
-          maxNumber: Math.min(profile?.customFilter?.enabled && profile.customFilter.maxNumber ? profile.customFilter.maxNumber : 60, 60)
-        },
-        difficultyAdjustment: rec.difficultyAdjustment
-      });
-      const numBaskets = Math.max(2, Math.min(12, _problem.meta?.rows || _problem.operands?.[1] || 2));
+      // Every divisor needs its own basket, so keep the divisor within the 12 baskets we can draw.
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        _problem = mathEngine.generateProblem({
+          tier,
+          operation: 'div',
+          format: 'numeric',
+          customFilter: {
+            enabled: true,
+            operations: ['div'],
+            maxNumber: Math.min(profile?.customFilter?.enabled && profile.customFilter.maxNumber ? profile.customFilter.maxNumber : 60, 60)
+          },
+          difficultyAdjustment: rec.difficultyAdjustment
+        });
+        if ((_problem.meta?.rows || _problem.operands?.[1] || 2) <= 12) break;
+      }
+      const numBaskets = Math.max(2, _problem.operands?.[1] || _problem.meta?.rows || 2);
       _basketCounts = Array.from({ length: numBaskets }, () => 0);
     } else {
       _problem = mathEngine.generateProblem({
@@ -755,17 +710,52 @@ function loadNewStationProblem() {
   _hintBundle = hintEngine.buildHintBundle(_problem);
   rotomPane?.setProblem?.(_problem, _hintBundle);
   rotomPane?.setMood?.('curious', 'Tap the manipulatives or enter your answer!');
+  _ctx?.speedBlitz?.resetForProblem?.();
+  autoReadAloud(profile);
+}
+
+/** SPEC §7.7: when the speech setting is on, a new problem is read aloud automatically. */
+function autoReadAloud(profile) {
+  if (profile?.settings?.speech !== true || !_problem) return;
+  const { audio } = getApis();
+  audio?.speakText?.(_problem.spokenPrompt || _problem.promptText, false);
+}
+
+/** Effects live inside the container, so they must be spawned AFTER render() rebuilds the DOM. */
+function getFxHost() {
+  return _container?.querySelector?.('.pm-lab') || _container;
+}
+
+function captureFocusSelector() {
+  if (!_container || typeof document === 'undefined') return null;
+  const el = document.activeElement;
+  if (!el || el === document.body || !_container.contains(el)) return null;
+  const parts = Object.entries(el.dataset || {}).map(([key, value]) => {
+    const attr = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+    return `[data-${attr}="${String(value).replace(/["\\]/g, '\\$&')}"]`;
+  });
+  return parts.length > 0 ? `${el.tagName.toLowerCase()}${parts.join('')}` : null;
+}
+
+function restoreFocus(selector) {
+  if (!selector || !_container) return;
+  try {
+    _container.querySelector(selector)?.focus?.({ preventScroll: true });
+  } catch {
+    /* selector no longer valid; ignore */
+  }
 }
 
 function submitAnswer(rawValue) {
   if (!_problem || _solved) return;
-  const { state, mathEngine, adaptive, audio, vfx, rotomPane, shell, itemsData } = getApis();
+  const { state, mathEngine, adaptive, audio, vfx, rotomPane, itemsData } = getApis();
   const profile = state.getActiveProfile();
   if (!profile) return;
 
   const isCorrect = mathEngine.validateAnswer(_problem, rawValue);
   const hintsUsed = rotomPane?.getCurrentHintTier?.() || 0;
   let adaptiveRes = null;
+  let celebration = null;
 
   if (isCorrect) {
     _solved = true;
@@ -798,10 +788,8 @@ function submitAnswer(rawValue) {
     });
 
     audio?.playCorrectChime?.(adaptiveRes?.streak || 1);
-    if (_container) {
-      vfx?.burstConfetti?.(_container);
-      vfx?.spawnFloatingText?.(_container, `+${coinsWon} Coins! +${xpGain} XP!`, 'success');
-    }
+    _ctx?.speedBlitz?.consumeBonus?.();
+    celebration = { coins: coinsWon, xp: xpGain };
 
     const rewardSummary = _station === 'recipes'
       ? `Delicious brew! Earned +1 ${berryDef?.name || 'Berry'} & +${coinsWon} Coins!`
@@ -817,12 +805,8 @@ function submitAnswer(rawValue) {
     rotomPane?.setMood?.(adaptiveRes?.streak >= 4 ? 'starry' : 'cheering', adaptiveRes?.encouragementMessage || rewardSummary);
     rotomPane?.updateMetrics?.({
       streak: updated?.sessionStreak || 0,
-      totalSolved: updated?.totalSolved || 0,
-      buddyXp: updated?.buddyXp || 0,
-      evolutionMeter: updated?.evolutionMeter || 0
+      totalSolved: updated?.totalSolved || 0
     });
-    rotomPane?.render?.(updated);
-    shell?.render?.(state.getState());
   } else {
     const updated = state.updateProfile((draft) => {
       adaptiveRes = adaptive.recordAttempt(draft, _problem.skillTag, false, hintsUsed);
@@ -844,10 +828,15 @@ function submitAnswer(rawValue) {
   }
 
   render();
+  if (celebration) {
+    const host = getFxHost();
+    vfx?.burstConfetti?.(host);
+    vfx?.spawnFloatingText?.(host, `+${celebration.coins} Coins! +${celebration.xp} XP!`, 'success');
+  }
 }
 
 function handleBuyCatalogItem(itemId) {
-  const { state, itemsData, audio, vfx, shell, rotomPane } = getApis();
+  const { state, itemsData, audio, vfx, shell } = getApis();
   const item = (itemsData.MART_CATALOG || []).find((entry) => entry.id === itemId);
   const profile = state.getActiveProfile();
   if (!item || !profile) return;
@@ -863,7 +852,7 @@ function handleBuyCatalogItem(itemId) {
     return;
   }
 
-  const updated = state.updateProfile((draft) => {
+  state.updateProfile((draft) => {
     draft.coins = Math.max(0, (draft.coins || 0) - item.costCoins);
     if (item.category === 'accessory') {
       if (!draft.ownedAccessories.includes(item.itemId)) {
@@ -876,13 +865,9 @@ function handleBuyCatalogItem(itemId) {
   });
 
   audio?.playClick?.('buy');
-  if (_container) {
-    vfx?.spawnFloatingText?.(_container, `Bought ${item.name}!`, 'coin');
-  }
   shell?.showToast?.(`Purchased ${item.name}!`, 'success');
-  shell?.render?.(state.getState());
-  rotomPane?.render?.(updated);
   render();
+  vfx?.spawnFloatingText?.(getFxHost(), `Bought ${item.name}!`, 'coin');
 }
 
 function getCauldronTotal() {
@@ -891,6 +876,18 @@ function getCauldronTotal() {
 
 function getCoinTrayTotal() {
   return _placedCoins.reduce((sum, val) => sum + val, 0);
+}
+
+function getBasketDividend() {
+  return _problem?.meta?.whole || _problem?.operands?.[0] || 0;
+}
+
+function areBasketsEven() {
+  return _basketCounts.length > 0 && _basketCounts.every((count) => count === _basketCounts[0]);
+}
+
+function isBasketDerivedSubmission() {
+  return _keypadValue === '' && _station === 'arrays' && _arrayOp === 'div';
 }
 
 function getActiveSubmissionValue() {
@@ -906,31 +903,67 @@ function getActiveSubmissionValue() {
   return 0;
 }
 
+/**
+ * Submits whatever the active workspace holds. Basket-derived answers are only accepted once
+ * EVERY basket holds the same share and all berries are dealt; otherwise a gentle nudge is
+ * shown (no attempt is recorded, no penalty).
+ */
+function submitActiveWorkspace() {
+  if (!_problem || _solved) return;
+  const { audio, rotomPane } = getApis();
+  if (isBasketDerivedSubmission()) {
+    const used = _basketCounts.reduce((sum, count) => sum + count, 0);
+    let nudge = null;
+    if (used === 0) {
+      nudge = 'Deal some berries into the baskets first, then check the share!';
+    } else if (!areBasketsEven()) {
+      nudge = 'The baskets are not even yet! Deal berries so every basket holds the same amount (or tap Reset to start fresh), then check again.';
+    } else if (used < getBasketDividend()) {
+      nudge = 'Some berries are still waiting! Keep dealing until none are left, evenly in every basket.';
+    }
+    if (nudge) {
+      audio?.playGentleNudge?.();
+      _feedback = { type: 'nudge', message: nudge };
+      rotomPane?.setMood?.('encouraging', nudge);
+      render();
+      return;
+    }
+  }
+  audio?.playClick?.('submit');
+  submitAnswer(getActiveSubmissionValue());
+}
+
 function renderChoicesAndKeypad(submitLabel) {
   const choices = Array.isArray(_problem?.choices) ? _problem.choices : [];
-  const activeVal = _keypadValue !== '' ? _keypadValue : String(getActiveSubmissionValue() || '');
+  let activeVal = _keypadValue !== '' ? _keypadValue : String(getActiveSubmissionValue() || '');
+  if (isBasketDerivedSubmission()) {
+    const used = _basketCounts.reduce((sum, count) => sum + count, 0);
+    if (used > 0 && !areBasketsEven()) {
+      activeVal = 'Uneven';
+    }
+  }
   return `
-    <div class="pm-input-panel">
-      <div class="pm-choices-grid" role="group" aria-label="Answer choices">
+    <div class="pm-lab-input-panel">
+      <div class="pokenav-choice-grid pm-lab-choices-grid" role="group" aria-label="Answer choices">
         ${choices.map((ch) => `
-          <button type="button" class="pm-choice-tile" data-action="pick-choice" data-value="${escapeHtml(ch)}" ${_solved ? 'disabled' : ''}>
+          <button type="button" class="pokenav-choice-tile pokenav-tactile pm-lab-choice-tile" data-action="pick-choice" data-value="${escapeHtml(ch)}" ${_solved ? 'disabled' : ''}>
             ${escapeHtml(ch)}
           </button>
         `).join('')}
       </div>
-      <div class="pm-keypad-display" aria-live="polite">
-        <span style="font-size:0.78rem; color:#94a3b8; font-weight:700;">Poké-Keypad</span>
-        <span>${escapeHtml(activeVal || '—')}</span>
-      </div>
-      <div class="pm-keypad-grid">
+      <div class="pokenav-keypad pm-lab-keypad">
+        <div class="pokenav-keypad-display pm-lab-keypad-display" aria-live="polite">
+          <span class="pm-lab-keypad-label">Poké-Keypad</span>
+          <span>${escapeHtml(activeVal || '—')}</span>
+        </div>
         ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => `
-          <button type="button" class="pm-key-btn" data-action="key-digit" data-digit="${d}" ${_solved ? 'disabled' : ''}>${d}</button>
+          <button type="button" class="pokenav-keypad-btn pm-lab-key-btn" data-action="key-digit" data-digit="${d}" ${_solved ? 'disabled' : ''}>${d}</button>
         `).join('')}
-        <button type="button" class="pm-key-btn" data-action="key-clear" ${_solved ? 'disabled' : ''}>C</button>
-        <button type="button" class="pm-key-btn" data-action="key-digit" data-digit="0" ${_solved ? 'disabled' : ''}>0</button>
-        <button type="button" class="pm-key-btn" data-action="key-back" ${_solved ? 'disabled' : ''}>⌫</button>
+        <button type="button" class="pokenav-keypad-btn is-action pm-lab-key-btn" data-action="key-clear" ${_solved ? 'disabled' : ''}>C</button>
+        <button type="button" class="pokenav-keypad-btn pm-lab-key-btn" data-action="key-digit" data-digit="0" ${_solved ? 'disabled' : ''}>0</button>
+        <button type="button" class="pokenav-keypad-btn is-action pm-lab-key-btn" data-action="key-back" ${_solved ? 'disabled' : ''}>⌫</button>
       </div>
-      <button type="button" class="pm-btn-primary" data-action="submit-answer" ${_solved ? 'disabled' : ''}>
+      <button type="button" class="btn-3d btn-success pm-lab-btn-primary pm-lab-submit" data-action="submit-answer" ${_solved ? 'disabled' : ''}>
         ${escapeHtml(submitLabel)}
       </button>
     </div>
@@ -949,26 +982,26 @@ function renderRecipesStation(itemsData) {
           <span class="pm-lab-badge">${escapeHtml(emoji)} Poffin &amp; Potion Recipe</span>
           <p class="pm-lab-prompt">${escapeHtml(_problem?.promptText || '')}</p>
         </div>
-        <button type="button" class="pm-lab-speak-btn" data-action="speak-problem">🔊 Read Recipe</button>
+        <button type="button" class="btn-3d btn-secondary pm-lab-speak-btn" data-action="speak-problem">🔊 Read Recipe</button>
       </div>
 
       <div class="pm-lab-workspace">
-        <div class="pm-cauldron-box">
-          <div class="pm-cauldron-pot">
+        <div class="pm-lab-cauldron-box">
+          <div class="pm-lab-cauldron-pot">
             <div style="font-size:0.82rem; font-weight:800; color:#cbd5e1;">Simmering Cauldron</div>
-            <div class="pm-cauldron-total">${total}</div>
-            <div class="pm-cauldron-bubbles">
+            <div class="pm-lab-cauldron-total">${total}</div>
+            <div class="pm-lab-cauldron-bubbles">
               ${_cauldronItems.slice(-14).map((item) => `
-                <span class="pm-cauldron-chip">+${item.value} ${escapeHtml(item.label)}</span>
+                <span class="pm-lab-cauldron-chip">+${item.value} ${escapeHtml(item.label)}</span>
               `).join('') || '<span style="font-size:0.8rem; color:#94a3b8;">Tap berries below to toss into pot</span>'}
             </div>
           </div>
 
-          <div class="pm-berry-tray">
+          <div class="pm-lab-berry-tray">
             ${CAULDRON_BERRIES.map((cb) => {
               const svg = berriesById[cb.id]?.svgMarkup || '🍓';
               return `
-                <button type="button" class="pm-berry-btn" data-action="add-cauldron" data-berry="${cb.id}" data-value="${cb.value}" ${_solved ? 'disabled' : ''}>
+                <button type="button" class="pm-lab-berry-btn pokenav-tactile" data-action="add-cauldron" data-berry="${cb.id}" data-value="${cb.value}" ${_solved ? 'disabled' : ''}>
                   ${svg}
                   <span>+${cb.value} ${escapeHtml(cb.label)}</span>
                 </button>
@@ -977,7 +1010,7 @@ function renderRecipesStation(itemsData) {
           </div>
 
           <div style="display:flex; gap:8px; justify-content:space-between;">
-            <button type="button" class="pm-btn-secondary" data-action="clear-cauldron" ${_solved ? 'disabled' : ''}>Empty Cauldron</button>
+            <button type="button" class="btn-3d btn-secondary btn-sm pm-lab-btn-secondary" data-action="clear-cauldron" ${_solved ? 'disabled' : ''}>Empty Cauldron</button>
             <span style="font-size:0.82rem; color:#9a3412; font-weight:700; align-self:center;">Equation: ${escapeHtml(_problem?.expression || '')}</span>
           </div>
         </div>
@@ -1001,17 +1034,17 @@ function renderArraysStation() {
     const used = _basketCounts.reduce((a, b) => a + b, 0);
     const remaining = Math.max(0, dividend - used);
     interactiveLeft = `
-      <div class="pm-cauldron-box">
+      <div class="pm-lab-cauldron-box">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <strong>Remaining Berries: ${remaining} / ${dividend}</strong>
           <div style="display:flex; gap:6px;">
-            <button type="button" class="pm-btn-secondary" data-action="deal-all-baskets" ${_solved || remaining < _basketCounts.length ? 'disabled' : ''}>+1 to Each Basket</button>
-            <button type="button" class="pm-btn-secondary" data-action="reset-baskets" ${_solved ? 'disabled' : ''}>Reset</button>
+            <button type="button" class="btn-3d btn-secondary btn-sm pm-lab-btn-secondary" data-action="deal-all-baskets" ${_solved || remaining < _basketCounts.length ? 'disabled' : ''}>+1 to Each Basket</button>
+            <button type="button" class="btn-3d btn-secondary btn-sm pm-lab-btn-secondary" data-action="reset-baskets" ${_solved ? 'disabled' : ''}>Reset</button>
           </div>
         </div>
-        <div class="pm-baskets-grid">
+        <div class="pm-lab-baskets-grid">
           ${_basketCounts.map((cnt, idx) => `
-            <button type="button" class="pm-basket-card" data-action="add-basket" data-index="${idx}" ${_solved || remaining <= 0 ? 'disabled' : ''}>
+            <button type="button" class="pm-lab-basket-card pokenav-tactile" data-action="add-basket" data-index="${idx}" ${_solved || remaining <= 0 ? 'disabled' : ''}>
               <span>🧺 Basket ${idx + 1}</span>
               <span style="font-size:1.25rem; color:#92400e;">${cnt} 🍓</span>
             </button>
@@ -1031,7 +1064,7 @@ function renderArraysStation() {
         cells.push(`
           <button
             type="button"
-            class="pm-plot-cell ${planted ? 'is-planted' : ''}"
+            class="pm-lab-plot-cell ${planted ? 'is-planted' : ''}"
             data-action="plant-rect"
             data-row="${r}"
             data-col="${c}"
@@ -1042,12 +1075,12 @@ function renderArraysStation() {
       }
     }
     interactiveLeft = `
-      <div class="pm-cauldron-box">
+      <div class="pm-lab-cauldron-box">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <strong>Planted Garden: ${_plantedCells.size} Berries</strong>
-          <button type="button" class="pm-btn-secondary" data-action="clear-garden" ${_solved ? 'disabled' : ''}>Clear Plot</button>
+          <button type="button" class="btn-3d btn-secondary btn-sm pm-lab-btn-secondary" data-action="clear-garden" ${_solved ? 'disabled' : ''}>Clear Plot</button>
         </div>
-        <div class="pm-garden-grid" style="grid-template-columns: repeat(${gridCols}, minmax(${gridCols > 6 ? 28 : 34}px, 1fr));">
+        <div class="pm-lab-garden-grid" style="grid-template-columns: repeat(${gridCols}, minmax(${gridCols > 6 ? 28 : 34}px, 1fr));">
           ${cells.join('')}
         </div>
         <div style="font-size:0.82rem; color:#365314; font-weight:700;">
@@ -1059,9 +1092,9 @@ function renderArraysStation() {
 
   return `
     <section class="pm-lab-card">
-      <div class="pm-array-mode-bar">
-        <button type="button" class="pm-cat-pill ${_arrayOp === 'mul' ? 'is-active' : ''}" data-action="set-array-op" data-op="mul">🌱 Planting Arrays (×)</button>
-        <button type="button" class="pm-cat-pill ${_arrayOp === 'div' ? 'is-active' : ''}" data-action="set-array-op" data-op="div">🧺 Basket Sharing (÷)</button>
+      <div class="pm-lab-mode-bar">
+        <button type="button" class="pm-lab-cat-pill ${_arrayOp === 'mul' ? 'is-active' : ''}" data-action="set-array-op" data-op="mul">🌱 Planting Arrays (×)</button>
+        <button type="button" class="pm-lab-cat-pill ${_arrayOp === 'div' ? 'is-active' : ''}" data-action="set-array-op" data-op="div">🧺 Basket Sharing (÷)</button>
       </div>
 
       <div class="pm-lab-story-head">
@@ -1069,7 +1102,7 @@ function renderArraysStation() {
           <span class="pm-lab-badge">${isDiv ? '🧺 Berry Division Patch' : '🌱 Berry Array Garden'}</span>
           <p class="pm-lab-prompt">${escapeHtml(_problem?.promptText || '')}</p>
         </div>
-        <button type="button" class="pm-lab-speak-btn" data-action="speak-problem">🔊 Read</button>
+        <button type="button" class="btn-3d btn-secondary pm-lab-speak-btn" data-action="speak-problem">🔊 Read</button>
       </div>
 
       <div class="pm-lab-workspace">
@@ -1091,9 +1124,9 @@ function renderMartStation(profile, itemsData) {
 
   return `
     <section class="pm-lab-card">
-      <div class="pm-array-mode-bar">
-        <button type="button" class="pm-cat-pill ${_checkoutMode === 'exact' ? 'is-active' : ''}" data-action="set-checkout-mode" data-mode="exact">🪙 Exact Pay Drill</button>
-        <button type="button" class="pm-cat-pill ${_checkoutMode === 'change' ? 'is-active' : ''}" data-action="set-checkout-mode" data-mode="change">🧾 Make Change Drill</button>
+      <div class="pm-lab-mode-bar">
+        <button type="button" class="pm-lab-cat-pill ${_checkoutMode === 'exact' ? 'is-active' : ''}" data-action="set-checkout-mode" data-mode="exact">🪙 Exact Pay Drill</button>
+        <button type="button" class="pm-lab-cat-pill ${_checkoutMode === 'change' ? 'is-active' : ''}" data-action="set-checkout-mode" data-mode="change">🧾 Make Change Drill</button>
       </div>
 
       <div class="pm-lab-story-head">
@@ -1101,23 +1134,23 @@ function renderMartStation(profile, itemsData) {
           <span class="pm-lab-badge">🏪 Poké-Mart Register Drill</span>
           <p class="pm-lab-prompt">${escapeHtml(_problem?.promptText || '')}</p>
         </div>
-        <button type="button" class="pm-lab-speak-btn" data-action="speak-problem">🔊 Read</button>
+        <button type="button" class="btn-3d btn-secondary pm-lab-speak-btn" data-action="speak-problem">🔊 Read</button>
       </div>
 
       <div class="pm-lab-workspace">
-        <div class="pm-cauldron-box">
+        <div class="pm-lab-cauldron-box">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <strong>Coin Counter Tray: ${trayTotal} Coins</strong>
-            <button type="button" class="pm-btn-secondary" data-action="clear-coins" ${_solved ? 'disabled' : ''}>Clear Tray</button>
+            <button type="button" class="btn-3d btn-secondary btn-sm pm-lab-btn-secondary" data-action="clear-coins" ${_solved ? 'disabled' : ''}>Clear Tray</button>
           </div>
-          <div class="pm-counter-coins">
+          <div class="pm-lab-counter-coins">
             ${_placedCoins.map((val, idx) => `
-              <button type="button" class="pm-placed-coin" data-action="remove-coin" data-index="${idx}" title="Remove coin" ${_solved ? 'disabled' : ''}>🪙 ${val}</button>
+              <button type="button" class="pm-lab-placed-coin" data-action="remove-coin" data-index="${idx}" title="Remove coin" ${_solved ? 'disabled' : ''}>🪙 ${val}</button>
             `).join('') || '<span style="font-size:0.82rem; color:#64748b;">Tap Poké-Coins below to place on counter</span>'}
           </div>
-          <div class="pm-coin-tray">
+          <div class="pm-lab-coin-tray">
             ${denominations.map((val) => `
-              <button type="button" class="pm-coin-btn" data-action="add-coin" data-value="${val}" ${_solved ? 'disabled' : ''}>+${val}</button>
+              <button type="button" class="pm-lab-coin-btn pokenav-tactile" data-action="add-coin" data-value="${val}" ${_solved ? 'disabled' : ''}>+${val}</button>
             `).join('')}
           </div>
         </div>
@@ -1135,25 +1168,25 @@ function renderMartStation(profile, itemsData) {
         <div class="pm-lab-pill">🪙 Wallet: ${coins} Coins</div>
       </div>
 
-      <div class="pm-mart-cats">
+      <div class="pm-lab-mart-cats">
         ${MART_CATEGORIES.map((cat) => `
-          <button type="button" class="pm-cat-pill ${_martCategory === cat.id ? 'is-active' : ''}" data-action="set-mart-cat" data-cat="${cat.id}">
+          <button type="button" class="pm-lab-cat-pill ${_martCategory === cat.id ? 'is-active' : ''}" data-action="set-mart-cat" data-cat="${cat.id}">
             ${escapeHtml(cat.label)}
           </button>
         `).join('')}
       </div>
 
-      <div class="pm-mart-grid">
+      <div class="pm-lab-mart-grid">
         ${filteredCatalog.map((item) => {
           const isAcc = item.category === 'accessory';
           const isOwned = isAcc && profile?.ownedAccessories?.includes(item.itemId);
           const ownedCount = !isAcc ? (profile?.inventory?.[item.itemId] ?? 0) : null;
           const canAfford = coins >= item.costCoins;
           return `
-            <article class="pm-mart-item">
+            <article class="pm-lab-mart-item">
               <div>
-                <div class="pm-mart-item-head">
-                  <div class="pm-mart-icon">${item.svgMarkup || '🎁'}</div>
+                <div class="pm-lab-mart-item-head">
+                  <div class="pm-lab-mart-icon">${item.svgMarkup || '🎁'}</div>
                   <div>
                     <div style="font-weight:800; font-size:0.95rem;">${escapeHtml(item.name)}</div>
                     <div style="font-size:0.78rem; color:#64748b; font-weight:700;">
@@ -1166,8 +1199,8 @@ function renderMartStation(profile, itemsData) {
               <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
                 <span style="font-weight:900; color:#b45309;">🪙 ${item.costCoins}</span>
                 ${isOwned
-                  ? `<button type="button" class="pm-btn-secondary" data-action="goto-camp">Equip in Camp →</button>`
-                  : `<button type="button" class="pm-btn-primary" style="min-height:42px; padding:6px 12px; font-size:0.86rem;" data-action="buy-item" data-item-id="${escapeHtml(item.id)}" ${canAfford ? '' : 'disabled'}>Buy</button>`
+                  ? `<button type="button" class="btn-3d btn-secondary btn-sm pm-lab-btn-secondary" data-action="goto-camp">Equip in Camp →</button>`
+                  : `<button type="button" class="btn-3d btn-success btn-sm pm-lab-btn-primary" data-action="buy-item" data-item-id="${escapeHtml(item.id)}" ${canAfford ? '' : 'disabled'}>Buy</button>`
                 }
               </div>
             </article>
@@ -1182,6 +1215,7 @@ function render() {
   if (!_container) return;
   const { state, itemsData, pokemonData, vfx } = getApis();
   const profile = state.getActiveProfile();
+  const focusSelector = captureFocusSelector();
 
   if (!profile) {
     _container.innerHTML = `<div class="pm-lab"><div class="pm-lab-card">Select or create a Trainer Profile to enter the Berry Lab &amp; Poké-Mart!</div></div>`;
@@ -1199,9 +1233,9 @@ function render() {
 
   const feedbackHtml = _feedback
     ? `
-      <div class="pm-feedback ${_feedback.type === 'good' ? 'is-good' : 'is-nudge'}" role="status">
+      <div class="pokenav-feedback pm-lab-feedback ${_feedback.type === 'good' ? 'is-correct' : 'is-nudge'}" role="status">
         <span>${escapeHtml(_feedback.message)}</span>
-        ${_solved ? `<button type="button" class="pm-btn-primary" style="min-height:42px;" data-action="next-problem">Next Challenge →</button>` : ''}
+        ${_solved ? `<button type="button" class="btn-3d btn-success pm-lab-btn-primary" data-action="next-problem">Next Challenge →</button>` : ''}
       </div>
     `
     : '';
@@ -1244,6 +1278,7 @@ function render() {
   if (bgSlot && vfx?.mountBiomeBackdrop) {
     vfx.mountBiomeBackdrop(bgSlot, 'meadow');
   }
+  restoreFocus(focusSelector);
 }
 
 function handleContainerClick(event) {
@@ -1390,7 +1425,7 @@ function handleContainerClick(event) {
 
   if (action === 'set-mart-cat') {
     _martCategory = btn.dataset.cat || 'all';
-    audio?.playClick?.('tap');
+    audio?.playClick?.('select');
     render();
     return;
   }
@@ -1436,8 +1471,7 @@ function handleContainerClick(event) {
   }
 
   if (action === 'submit-answer') {
-    audio?.playClick?.('submit');
-    submitAnswer(getActiveSubmissionValue());
+    submitActiveWorkspace();
     return;
   }
 
@@ -1535,8 +1569,7 @@ export function handleKey(event) {
       loadNewStationProblem();
       render();
     } else {
-      audio?.playClick?.('submit');
-      submitAnswer(getActiveSubmissionValue());
+      submitActiveWorkspace();
     }
     return true;
   }

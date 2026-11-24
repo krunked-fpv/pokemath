@@ -134,13 +134,13 @@ const FORGE_CSS = `
   background: linear-gradient(90deg, #38bdf8 0%, #a855f7 55%, #ffcb05 100%);
   transition: width 0.35s ease;
 }
-.pm-branch-pills {
+.pm-forge-branch-pills {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 4px;
 }
-.pm-branch-pill {
+.pm-forge-branch-pill {
   min-height: 36px;
   padding: 4px 10px;
   border-radius: 999px;
@@ -151,7 +151,7 @@ const FORGE_CSS = `
   font-size: 0.8rem;
   cursor: pointer;
 }
-.pm-branch-pill.is-selected {
+.pm-forge-branch-pill.is-selected {
   border-color: #ffcb05;
   background: #422006;
   color: #fef08a;
@@ -170,7 +170,7 @@ const FORGE_CSS = `
   gap: 16px;
   align-items: center;
 }
-.pm-triangle-arena {
+.pm-forge-triangle-arena {
   position: relative;
   min-height: 250px;
   border-radius: 18px;
@@ -183,7 +183,7 @@ const FORGE_CSS = `
   justify-content: space-between;
   gap: 14px;
 }
-.pm-triangle-svg {
+.pm-forge-triangle-svg {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -191,7 +191,7 @@ const FORGE_CSS = `
   pointer-events: none;
   opacity: 0.45;
 }
-.pm-stone-row {
+.pm-forge-stone-row {
   position: relative;
   z-index: 1;
   display: flex;
@@ -199,7 +199,7 @@ const FORGE_CSS = `
   gap: 36px;
   width: 100%;
 }
-.pm-evo-stone {
+.pm-forge-evo-stone {
   min-width: 92px;
   min-height: 78px;
   padding: 10px 14px;
@@ -213,15 +213,15 @@ const FORGE_CSS = `
   gap: 2px;
   box-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
 }
-.pm-evo-stone.is-missing {
+.pm-forge-evo-stone.is-missing {
   border-color: #ffcb05;
   background: radial-gradient(circle at 30% 25%, #713f12 0%, #1e1b4b 90%);
   box-shadow: 0 0 24px rgba(255, 203, 5, 0.6);
-  animation: pmStonePulse 1.6s ease-in-out infinite;
+  animation: pmForgeStonePulse 1.6s ease-in-out infinite;
 }
-.pm-stone-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; font-weight: 800; }
-.pm-stone-val { font-size: 1.55rem; font-weight: 900; color: #ffffff; }
-.pm-scale-arena {
+.pm-forge-stone-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; font-weight: 800; }
+.pm-forge-stone-val { font-size: 1.55rem; font-weight: 900; color: #ffffff; }
+.pm-forge-scale-arena {
   border-radius: 18px;
   background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
   border: 2px solid #93c5fd;
@@ -231,19 +231,19 @@ const FORGE_CSS = `
   align-items: center;
   gap: 10px;
 }
-.pm-scale-beam-wrap {
+.pm-forge-scale-beam-wrap {
   width: 100%;
   max-width: 360px;
   transition: transform 0.35s ease;
   transform-origin: 50% 28px;
 }
-.pm-scale-pans {
+.pm-forge-scale-pans {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
 }
-.pm-scale-pan {
+.pm-forge-scale-pan {
   min-height: 74px;
   border-radius: 16px;
   background: #ffffff;
@@ -257,70 +257,27 @@ const FORGE_CSS = `
   font-weight: 900;
   color: #1e293b;
 }
-.pm-forge-choices {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+.pm-forge-choices { margin: 0; }
+.pm-forge-keypad { max-width: none; }
+.pm-forge-keypad-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffcb05;
+  text-align: left;
 }
-.pm-forge-choice {
-  min-height: 54px;
-  border-radius: 14px;
-  border: 2px solid #cbd5e1;
-  border-bottom-width: 5px;
-  background: #ffffff;
-  font-size: 1.15rem;
-  font-weight: 900;
-  color: #0f172a;
-  cursor: pointer;
-}
-.pm-forge-choice:hover { border-color: #3b4cca; }
-.pm-forge-keypad {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-.pm-forge-key {
-  min-height: 46px;
-  border-radius: 12px;
-  border: 2px solid #cbd5e1;
-  border-bottom-width: 4px;
-  background: #f8fafc;
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #1e293b;
-  cursor: pointer;
-}
-.pm-forge-submit {
-  min-height: 52px;
-  border-radius: 14px;
-  border: 2px solid #b45309;
-  border-bottom-width: 5px;
-  background: #ffcb05;
-  color: #422006;
-  font-size: 1.02rem;
-  font-weight: 900;
-  cursor: pointer;
-}
-.pm-forge-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.pm-forge-keypad-label { font-size: 0.78rem; color: #94a3b8; font-weight: 700; }
+.pm-forge-submit { width: 100%; min-height: 52px; font-size: 1.02rem; }
 .pm-forge-btn-ghost {
   min-height: 44px;
   padding: 8px 14px;
-  border-radius: 12px;
-  border: 2px solid rgba(148, 163, 184, 0.45);
+  border-color: rgba(148, 163, 184, 0.45);
   background: rgba(15, 23, 42, 0.75);
   color: #f8fafc;
-  font-weight: 800;
-  cursor: pointer;
 }
-.pm-forge-nudge {
-  margin-top: 10px;
-  padding: 10px 14px;
-  border-radius: 14px;
-  background: #fef3c7;
-  border: 2px solid #fcd34d;
-  color: #92400e;
-  font-weight: 700;
-}
+.pm-forge-nudge { margin-top: 10px; }
 .pm-forge-overlay {
   position: absolute;
   inset: 0;
@@ -335,7 +292,7 @@ const FORGE_CSS = `
   text-align: center;
   color: #ffffff;
 }
-.pm-evo-stage-ring {
+.pm-forge-evo-stage-ring {
   position: relative;
   width: 190px;
   height: 190px;
@@ -345,41 +302,41 @@ const FORGE_CSS = `
   align-items: center;
   justify-content: center;
 }
-.pm-evo-morph {
+.pm-forge-evo-morph {
   transition: transform 0.55s ease, opacity 0.45s ease, filter 0.45s ease;
 }
-.pm-evo-morph.is-silhouette {
+.pm-forge-evo-morph.is-silhouette {
   filter: brightness(0) invert(1) drop-shadow(0 0 22px #ffcb05);
-  animation: pmEvoFlash 0.55s ease-in-out infinite alternate;
+  animation: pmForgeEvoFlash 0.55s ease-in-out infinite alternate;
 }
-.pm-evo-banner {
+.pm-forge-evo-banner {
   background: rgba(15, 23, 42, 0.88);
   border: 2px solid #ffcb05;
   border-radius: 18px;
   padding: 14px 20px;
   max-width: 480px;
 }
-@keyframes pmStonePulse {
+@keyframes pmForgeStonePulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.04); }
 }
-@keyframes pmEvoFlash {
+@keyframes pmForgeEvoFlash {
   0% { transform: scale(0.95); opacity: 0.72; }
   100% { transform: scale(1.1); opacity: 1; }
 }
 @media (max-width: 820px) {
   .pm-forge-grid { grid-template-columns: 1fr; }
-  .pm-stone-row { gap: 16px; }
+  .pm-forge-stone-row { gap: 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pm-evo-stone.is-missing, .pm-evo-morph.is-silhouette { animation: none !important; }
-  .pm-scale-beam-wrap, .pm-forge-meter-fill, .pm-evo-morph { transition: none !important; }
+  .pm-forge-evo-stone.is-missing, .pm-forge-evo-morph.is-silhouette { animation: none !important; }
+  .pm-forge-scale-beam-wrap, .pm-forge-meter-fill, .pm-forge-evo-morph { transition: none !important; }
 }
-[data-reduced-motion="true"] .pm-evo-stone.is-missing,
-[data-reduced-motion="true"] .pm-evo-morph.is-silhouette { animation: none !important; }
-[data-reduced-motion="true"] .pm-scale-beam-wrap,
+[data-reduced-motion="true"] .pm-forge-evo-stone.is-missing,
+[data-reduced-motion="true"] .pm-forge-evo-morph.is-silhouette { animation: none !important; }
+[data-reduced-motion="true"] .pm-forge-scale-beam-wrap,
 [data-reduced-motion="true"] .pm-forge-meter-fill,
-[data-reduced-motion="true"] .pm-evo-morph { transition: none !important; }
+[data-reduced-motion="true"] .pm-forge-evo-morph { transition: none !important; }
 `;
 
 let _container = null;
@@ -473,15 +430,29 @@ function buildTrialProblems(profile) {
   const rec = adaptive.getRecommendedProblemConfig(profile || { tier }, 'route-5');
   const custom = profile?.customFilter?.enabled ? profile.customFilter : null;
 
+  // Fact-family triangles print the two given stones, so retry (a few times) when a tight custom
+  // filter hands us a puzzle whose layout can't be trusted or whose given stone IS the answer.
+  const generateTriangle = (operation, difficultyAdjustment) => {
+    let candidate = null;
+    let trustedFallback = null;
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      candidate = mathEngine.generateProblem({
+        tier,
+        operation,
+        format: 'missing',
+        customFilter: custom,
+        difficultyAdjustment
+      });
+      const resolved = resolveTriangleStones(candidate);
+      if (resolved.trusted && !resolved.showsAnswer) return candidate;
+      if (resolved.trusted && !trustedFallback) trustedFallback = candidate;
+    }
+    return trustedFallback || candidate;
+  };
+
   // Puzzle 1: Fact-family triangle (addition/multiplication missing)
   const op1 = tier === 'ace' || tier === 'champion' ? 'mul' : 'add';
-  const p1 = mathEngine.generateProblem({
-    tier,
-    operation: op1,
-    format: 'missing',
-    customFilter: custom,
-    difficultyAdjustment: rec.difficultyAdjustment
-  });
+  const p1 = generateTriangle(op1, rec.difficultyAdjustment);
 
   // Puzzle 2: Two-pan Legendary Balance Scale
   const p2 = mathEngine.generateProblem({
@@ -494,13 +465,7 @@ function buildTrialProblems(profile) {
 
   // Puzzle 3: Fact-family triangle (subtraction/division missing)
   const op3 = tier === 'ace' || tier === 'champion' ? 'div' : 'sub';
-  const p3 = mathEngine.generateProblem({
-    tier,
-    operation: op3,
-    format: 'missing',
-    customFilter: custom,
-    difficultyAdjustment: 1
-  });
+  const p3 = generateTriangle(op3, 1);
 
   return [p1, p2, p3];
 }
@@ -512,6 +477,40 @@ function syncCurrentProblemToRotom() {
   const bundle = hintEngine.buildHintBundle(problem);
   rotomPane?.setProblem?.(problem, bundle);
   rotomPane?.setMood?.('thinking', `Forge Seal ${_puzzleIndex + 1} of 3! Use the Stones or Balance Scale.`);
+  _ctx?.speedBlitz?.resetForProblem?.();
+  autoReadAloud(problem);
+}
+
+/** SPEC §7.7: when the speech setting is on, a newly shown problem is read aloud automatically. */
+function autoReadAloud(problem) {
+  const { state, audio } = getApis();
+  if (state.getActiveProfile()?.settings?.speech !== true || !problem) return;
+  audio?.speakText?.(problem.spokenPrompt || problem.promptText, false);
+}
+
+/** Effects live inside the container, so they must be spawned AFTER render() rebuilds the DOM. */
+function getFxHost() {
+  return _container?.querySelector?.('.pm-forge') || _container;
+}
+
+function captureFocusSelector() {
+  if (!_container || typeof document === 'undefined') return null;
+  const el = document.activeElement;
+  if (!el || el === document.body || !_container.contains(el)) return null;
+  const parts = Object.entries(el.dataset || {}).map(([key, value]) => {
+    const attr = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+    return `[data-${attr}="${String(value).replace(/["\\]/g, '\\$&')}"]`;
+  });
+  return parts.length > 0 ? `${el.tagName.toLowerCase()}${parts.join('')}` : null;
+}
+
+function restoreFocus(selector) {
+  if (!selector || !_container) return;
+  try {
+    _container.querySelector(selector)?.focus?.({ preventScroll: true });
+  } catch {
+    /* selector no longer valid; ignore */
+  }
 }
 
 function applyForgeQuestProgress(draft, increments) {
@@ -586,13 +585,11 @@ function triggerTrialCompletion() {
       };
       render();
 
-      const overlay = _container.querySelector('[data-evo-overlay]');
+      const overlay = _container?.querySelector('[data-evo-overlay]');
       if (overlay) {
         vfx?.burstConfetti?.(overlay);
       }
       rotomPane?.setMood?.('starry', `Amazing! ${oldBuddy?.name} evolved into ${targetEvo.name}!`);
-      rotomPane?.render?.(updated);
-      shell?.render?.(state.getState());
       shell?.showToast?.(`${oldBuddy?.name} evolved into ${targetEvo.name}!`, 'success');
     }, 1700);
   } else {
@@ -623,15 +620,13 @@ function triggerTrialCompletion() {
       vfx?.burstConfetti?.(overlay);
     }
     rotomPane?.setMood?.('cheering', 'Forge Shrine cleared! +40 Stardust & +1 Rare Candy!');
-    rotomPane?.render?.(updated);
-    shell?.render?.(state.getState());
   }
 }
 
 function submitForgeAnswer(rawVal) {
   const problem = _problems[_puzzleIndex];
   if (!problem || _evoState) return;
-  const { state, mathEngine, adaptive, audio, vfx, rotomPane, shell } = getApis();
+  const { state, mathEngine, adaptive, audio, vfx, rotomPane } = getApis();
   const profile = state.getActiveProfile();
   if (!profile) return;
 
@@ -661,20 +656,17 @@ function submitForgeAnswer(rawVal) {
     });
 
     audio?.playCorrectChime?.(adaptiveRes?.streak || 1);
-    if (_container) {
-      vfx?.spawnFloatingText?.(_container, `Seal ${_puzzleIndex + 1} Lit! +34% Charge!`, 'success');
-    }
+    _ctx?.speedBlitz?.consumeBonus?.();
+    const sealMessage = `Seal ${_puzzleIndex + 1} Lit! +34% Charge!`;
 
     rotomPane?.updateMetrics?.({
       streak: updated?.sessionStreak || 0,
-      totalSolved: updated?.totalSolved || 0,
-      buddyXp: updated?.buddyXp || 0,
-      evolutionMeter: updated?.evolutionMeter || 0
+      totalSolved: updated?.totalSolved || 0
     });
-    shell?.render?.(state.getState());
 
     if (isFinalPuzzle) {
       triggerTrialCompletion();
+      vfx?.spawnFloatingText?.(getFxHost(), sealMessage, 'success');
       return;
     }
 
@@ -684,6 +676,7 @@ function submitForgeAnswer(rawVal) {
     _scaleTiltDeg = -6;
     syncCurrentProblemToRotom();
     render();
+    vfx?.spawnFloatingText?.(getFxHost(), sealMessage, 'success');
   } else {
     const numVal = Number(rawVal);
     if (_puzzleIndex === 1 && Number.isFinite(numVal)) {
@@ -710,21 +703,79 @@ function submitForgeAnswer(rawVal) {
   }
 }
 
+/**
+ * Works out which stone is hidden and which stones are safe to print for a fact-family triangle.
+ * Tight custom filters can degrade a 'missing' puzzle into a plain numeric equation whose meta
+ * already holds all 3 numbers (including the answer), so we resolve the unknown slot algebraically
+ * against problem.answer and never blindly default to hiding 'whole'. If the shape does not match,
+ * every stone stays masked as '?'.
+ */
+function resolveTriangleStones(problem) {
+  const toStone = (value) => (value === null || value === undefined || value === '' || !Number.isFinite(Number(value))
+    ? null
+    : Number(value));
+  const parts = Array.isArray(problem?.meta?.parts) ? problem.meta.parts : [];
+  const stones = {
+    whole: toStone(problem?.meta?.whole),
+    left: toStone(parts[0]),
+    right: toStone(parts[1])
+  };
+  const answer = Number(problem?.answer);
+  const op = problem?.operation;
+  const isMulDiv = op === 'mul' || op === 'div';
+  const isAddSub = op === 'add' || op === 'sub';
+  const hidden = Object.keys(stones).filter((slot) => stones[slot] === null);
+
+  let missingSlot = null;
+  if (Number.isFinite(answer) && (isMulDiv || isAddSub)) {
+    const matchesAnswer = (slot) => {
+      if (slot === 'whole') {
+        return (isMulDiv ? stones.left * stones.right : stones.left + stones.right) === answer;
+      }
+      const other = slot === 'left' ? stones.right : stones.left;
+      if (isMulDiv) return other !== 0 && stones.whole / other === answer;
+      return stones.whole - other === answer;
+    };
+
+    if (hidden.length === 1) {
+      if (matchesAnswer(hidden[0])) missingSlot = hidden[0];
+    } else if (hidden.length === 0) {
+      // Numeric fallback (e.g. tight customFilter): hide the slot that actually equals problem.answer.
+      const candidateSlot = (op === 'add' || op === 'mul') ? 'whole' : 'right';
+      if (stones[candidateSlot] === answer && matchesAnswer(candidateSlot)) {
+        missingSlot = candidateSlot;
+      }
+    }
+  }
+
+  const trusted = missingSlot !== null;
+  return {
+    trusted,
+    missingSlot,
+    stones,
+    isMulDiv,
+    // True when a printed (given) stone already equals the answer, e.g. "2 + ? = 4" or "4 × 1 = ?".
+    showsAnswer: trusted
+      ? Object.entries(stones).some(([slot, value]) => slot !== missingSlot && value === answer)
+      : false
+  };
+}
+
 function renderTrianglePuzzle(problem) {
-  const whole = problem.meta?.whole ?? null;
-  const parts = Array.isArray(problem.meta?.parts) ? problem.meta.parts : [null, null];
-  const leftPart = parts[0] ?? null;
-  const rightPart = parts[1] ?? null;
-  const missingSlot = whole === null ? 'whole'
-    : leftPart === null ? 'left'
-    : rightPart === null ? 'right'
-    : 'whole';
-  const isMulDiv = problem.operation === 'mul' || problem.operation === 'div';
+  const resolved = resolveTriangleStones(problem);
+  const { trusted, missingSlot, stones, isMulDiv } = resolved;
+  const whole = trusted ? stones.whole : null;
+  const leftPart = trusted ? stones.left : null;
+  const rightPart = trusted ? stones.right : null;
+  const maskedExpression = !trusted && typeof problem?.expression === 'string' && problem.expression.includes('?')
+    ? problem.expression
+    : '';
   const relationLabel = isMulDiv ? 'Factor × Factor = Product' : 'Part + Part = Whole';
+  const stoneValue = (slot, value) => escapeHtml(!trusted ? '?' : slot === missingSlot ? (_keypadValue || '?') : value);
 
   return `
-    <div class="pm-triangle-arena">
-      <svg class="pm-triangle-svg" viewBox="0 0 320 220" preserveAspectRatio="none" aria-hidden="true">
+    <div class="pm-forge-triangle-arena">
+      <svg class="pm-forge-triangle-svg" viewBox="0 0 320 220" preserveAspectRatio="none" aria-hidden="true">
         <line x1="160" y1="48" x2="78" y2="170" stroke="#38bdf8" stroke-width="4" stroke-dasharray="7 5" />
         <line x1="160" y1="48" x2="242" y2="170" stroke="#38bdf8" stroke-width="4" stroke-dasharray="7 5" />
         <line x1="78" y1="170" x2="242" y2="170" stroke="#a855f7" stroke-width="4" stroke-dasharray="7 5" />
@@ -733,22 +784,23 @@ function renderTrianglePuzzle(problem) {
       <div style="position:relative; z-index:1; font-size:0.8rem; font-weight:800; color:#bae6fd; letter-spacing:0.04em;">
         ✨ ${escapeHtml(relationLabel)}
       </div>
+      ${maskedExpression ? `<div style="position:relative; z-index:1; font-size:1.05rem; font-weight:900; color:#fef08a;">${escapeHtml(maskedExpression)}</div>` : ''}
 
-      <div class="pm-stone-row">
-        <div class="pm-evo-stone ${missingSlot === 'whole' ? 'is-missing' : ''}">
-          <span class="pm-stone-label">${isMulDiv ? 'Product' : 'Whole'}</span>
-          <span class="pm-stone-val">${escapeHtml(missingSlot === 'whole' ? (_keypadValue || '?') : whole)}</span>
+      <div class="pm-forge-stone-row">
+        <div class="pm-forge-evo-stone ${missingSlot === 'whole' ? 'is-missing' : ''}">
+          <span class="pm-forge-stone-label">${isMulDiv ? 'Product' : 'Whole'}</span>
+          <span class="pm-forge-stone-val">${stoneValue('whole', whole)}</span>
         </div>
       </div>
 
-      <div class="pm-stone-row">
-        <div class="pm-evo-stone ${missingSlot === 'left' ? 'is-missing' : ''}">
-          <span class="pm-stone-label">${isMulDiv ? 'Factor A' : 'Part A'}</span>
-          <span class="pm-stone-val">${escapeHtml(missingSlot === 'left' ? (_keypadValue || '?') : leftPart)}</span>
+      <div class="pm-forge-stone-row">
+        <div class="pm-forge-evo-stone ${missingSlot === 'left' ? 'is-missing' : ''}">
+          <span class="pm-forge-stone-label">${isMulDiv ? 'Factor A' : 'Part A'}</span>
+          <span class="pm-forge-stone-val">${stoneValue('left', leftPart)}</span>
         </div>
-        <div class="pm-evo-stone ${missingSlot === 'right' ? 'is-missing' : ''}">
-          <span class="pm-stone-label">${isMulDiv ? 'Factor B' : 'Part B'}</span>
-          <span class="pm-stone-val">${escapeHtml(missingSlot === 'right' ? (_keypadValue || '?') : rightPart)}</span>
+        <div class="pm-forge-evo-stone ${missingSlot === 'right' ? 'is-missing' : ''}">
+          <span class="pm-forge-stone-label">${isMulDiv ? 'Factor B' : 'Part B'}</span>
+          <span class="pm-forge-stone-val">${stoneValue('right', rightPart)}</span>
         </div>
       </div>
     </div>
@@ -761,21 +813,21 @@ function renderBalancePuzzle(problem) {
     : String(problem.leftExpr || '?');
 
   return `
-    <div class="pm-scale-arena">
+    <div class="pm-forge-scale-arena">
       <div style="font-size:0.85rem; font-weight:800; color:#1e40af;">⚖️ Legendary Balance Scale</div>
-      <div class="pm-scale-beam-wrap" style="transform: rotate(${_scaleTiltDeg}deg);">
+      <div class="pm-forge-scale-beam-wrap" style="transform: rotate(${_scaleTiltDeg}deg);">
         <svg viewBox="0 0 320 60" width="100%" height="56" aria-hidden="true">
           <rect x="20" y="22" width="280" height="8" rx="4" fill="#1e3a8a" />
           <circle cx="160" cy="26" r="11" fill="#ffcb05" stroke="#b45309" stroke-width="3" />
           <line x1="50" y1="30" x2="50" y2="56" stroke="#64748b" stroke-width="3" />
           <line x1="270" y1="30" x2="270" y2="56" stroke="#64748b" stroke-width="3" />
         </svg>
-        <div class="pm-scale-pans">
-          <div class="pm-scale-pan">
+        <div class="pm-forge-scale-pans">
+          <div class="pm-forge-scale-pan">
             <span style="font-size:0.72rem; color:#64748b;">LEFT PAN</span>
             <span style="font-size:1.3rem;">${escapeHtml(leftDisplay)}</span>
           </div>
-          <div class="pm-scale-pan">
+          <div class="pm-forge-scale-pan">
             <span style="font-size:0.72rem; color:#64748b;">RIGHT PAN</span>
             <span style="font-size:1.3rem;">${escapeHtml(problem.rightExpr || '')}</span>
           </div>
@@ -796,10 +848,10 @@ function renderEvolutionOverlay() {
     return `
       <div class="pm-forge-overlay" data-evo-overlay role="dialog" aria-label="Forge Trial Complete">
         <div style="font-size:2.4rem;">🌟</div>
-        <div class="pm-evo-stage-ring">
+        <div class="pm-forge-evo-stage-ring">
           <div data-evo-sprite></div>
         </div>
-        <div class="pm-evo-banner">
+        <div class="pm-forge-evo-banner">
           <h3 style="margin:0 0 6px; color:#ffcb05;">Forge Shrine Complete!</h3>
           <p style="margin:0; line-height:1.45;">
             Earned <strong>+40 Stardust</strong>, <strong>+25 Coins</strong>, and <strong>+1 Rare Candy</strong>!
@@ -807,8 +859,8 @@ function renderEvolutionOverlay() {
           </p>
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
-          <button type="button" class="pm-forge-submit" style="padding:10px 18px;" data-action="goto-camp">Pick Another Buddy in Camp →</button>
-          <button type="button" class="pm-forge-btn-ghost" data-action="restart-trial">Play Forge Again</button>
+          <button type="button" class="btn-3d btn-gold pm-forge-submit" style="width:auto; padding:10px 18px;" data-action="goto-camp">Pick Another Buddy in Camp →</button>
+          <button type="button" class="btn-3d pm-forge-btn-ghost" data-action="restart-trial">Play Forge Again</button>
         </div>
       </div>
     `;
@@ -820,10 +872,10 @@ function renderEvolutionOverlay() {
       <div style="font-size:0.9rem; font-weight:900; letter-spacing:0.08em; color:#bae6fd;">
         ${isMorphing ? '✨ EVOLUTION ENERGY SURGING...' : '🎉 EVOLUTION COMPLETE!'}
       </div>
-      <div class="pm-evo-stage-ring">
-        <div class="pm-evo-morph ${isMorphing ? 'is-silhouette' : ''}" data-evo-sprite></div>
+      <div class="pm-forge-evo-stage-ring">
+        <div class="pm-forge-evo-morph ${isMorphing ? 'is-silhouette' : ''}" data-evo-sprite></div>
       </div>
-      <div class="pm-evo-banner">
+      <div class="pm-forge-evo-banner">
         ${isMorphing
           ? `<h3 style="margin:0; color:#ffcb05;">What? ${escapeHtml(oldBuddy?.name || 'Buddy')} is evolving!</h3>`
           : `
@@ -837,8 +889,8 @@ function renderEvolutionOverlay() {
       </div>
       ${isMorphing ? '' : `
         <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
-          <button type="button" class="pm-forge-submit" style="padding:10px 18px;" data-action="goto-camp">Celebrate in Buddy Camp →</button>
-          <button type="button" class="pm-forge-btn-ghost" data-action="restart-trial">New Forge Trial</button>
+          <button type="button" class="btn-3d btn-gold pm-forge-submit" style="width:auto; padding:10px 18px;" data-action="goto-camp">Celebrate in Buddy Camp →</button>
+          <button type="button" class="btn-3d pm-forge-btn-ghost" data-action="restart-trial">New Forge Trial</button>
         </div>
       `}
     </div>
@@ -849,6 +901,7 @@ function render() {
   if (!_container) return;
   const { state, pokemonData, vfx } = getApis();
   const profile = state.getActiveProfile();
+  const focusSelector = captureFocusSelector();
 
   if (!profile) {
     _container.innerHTML = `<div class="pm-forge"><div class="pm-forge-stage">Select a Trainer Profile to enter the Evolution Forge!</div></div>`;
@@ -919,9 +972,9 @@ function render() {
               <div class="pm-forge-meter-fill" style="width:${Math.min(100, meter)}%;"></div>
             </div>
             ${branchOptions.length > 0 ? `
-              <div class="pm-branch-pills" role="group" aria-label="Evolution branch choices">
+              <div class="pm-forge-branch-pills" role="group" aria-label="Evolution branch choices">
                 ${branchOptions.map((opt) => `
-                  <button type="button" class="pm-branch-pill ${targetEvo?.id === opt.id ? 'is-selected' : ''}" data-action="pick-branch" data-species="${escapeHtml(opt.id)}">
+                  <button type="button" class="pm-forge-branch-pill ${targetEvo?.id === opt.id ? 'is-selected' : ''}" data-action="pick-branch" data-species="${escapeHtml(opt.id)}">
                     ${escapeHtml(opt.name)}
                   </button>
                 `).join('')}
@@ -931,11 +984,11 @@ function render() {
 
           <div style="display:flex; flex-wrap:wrap; gap:8px;">
             ${canEvolve ? `
-              <button type="button" class="pm-forge-btn-ghost" data-action="toggle-training">
-                ${_trainingOnly ? 'Enable Evolution' : 'Switch Buddy / Shrine Only'}
+              <button type="button" class="btn-3d pm-forge-btn-ghost" data-action="toggle-training">
+                ${_trainingOnly ? 'Evolution Trial Mode' : 'Shrine Training Mode (No Evolve)'}
               </button>
             ` : ''}
-            <button type="button" class="pm-forge-btn-ghost" data-action="goto-camp">Switch Buddy in Camp →</button>
+            <button type="button" class="btn-3d pm-forge-btn-ghost" data-action="goto-camp">Switch Buddy in Camp →</button>
           </div>
         </section>
 
@@ -947,37 +1000,37 @@ function render() {
               </span>
               <div style="font-size:1.1rem; font-weight:800; margin-top:2px;">${escapeHtml(problem?.promptText || '')}</div>
             </div>
-            <button type="button" class="pm-forge-key" style="padding:6px 12px;" data-action="speak-problem">🔊 Read</button>
+            <button type="button" class="btn-3d btn-secondary btn-sm" data-action="speak-problem">🔊 Read</button>
           </div>
 
           <div class="pm-forge-grid">
             ${_puzzleIndex === 1 ? renderBalancePuzzle(problem) : renderTrianglePuzzle(problem)}
 
             <div style="display:flex; flex-direction:column; gap:10px;">
-              <div class="pm-forge-choices">
+              <div class="pokenav-choice-grid pm-forge-choices" role="group" aria-label="Answer choices">
                 ${choices.map((ch) => `
-                  <button type="button" class="pm-forge-choice" data-action="pick-choice" data-value="${escapeHtml(ch)}">${escapeHtml(ch)}</button>
+                  <button type="button" class="pokenav-choice-tile pokenav-tactile pm-forge-choice" data-action="pick-choice" data-value="${escapeHtml(ch)}">${escapeHtml(ch)}</button>
                 `).join('')}
               </div>
-              <div style="background:#0f172a; color:#ffcb05; border-radius:12px; padding:10px 14px; display:flex; justify-content:space-between; font-weight:900; font-size:1.25rem;">
-                <span style="font-size:0.78rem; color:#94a3b8; align-self:center;">Stone Input</span>
-                <span>${escapeHtml(_keypadValue || '—')}</span>
-              </div>
-              <div class="pm-forge-keypad">
+              <div class="pokenav-keypad pm-forge-keypad">
+                <div class="pokenav-keypad-display pm-forge-keypad-display" aria-live="polite">
+                  <span class="pm-forge-keypad-label">Stone Input</span>
+                  <span>${escapeHtml(_keypadValue || '—')}</span>
+                </div>
                 ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => `
-                  <button type="button" class="pm-forge-key" data-action="key-digit" data-digit="${d}">${d}</button>
+                  <button type="button" class="pokenav-keypad-btn pm-forge-key" data-action="key-digit" data-digit="${d}">${d}</button>
                 `).join('')}
-                <button type="button" class="pm-forge-key" data-action="key-clear">C</button>
-                <button type="button" class="pm-forge-key" data-action="key-digit" data-digit="0">0</button>
-                <button type="button" class="pm-forge-key" data-action="key-back">⌫</button>
+                <button type="button" class="pokenav-keypad-btn is-action pm-forge-key" data-action="key-clear">C</button>
+                <button type="button" class="pokenav-keypad-btn pm-forge-key" data-action="key-digit" data-digit="0">0</button>
+                <button type="button" class="pokenav-keypad-btn is-action pm-forge-key" data-action="key-back">⌫</button>
               </div>
-              <button type="button" class="pm-forge-submit" data-action="submit-answer" ${_keypadValue === '' ? 'disabled' : ''}>
+              <button type="button" class="btn-3d btn-gold pm-forge-submit" data-action="submit-answer" ${_keypadValue === '' ? 'disabled' : ''}>
                 Channel Forge Energy!
               </button>
             </div>
           </div>
 
-          ${_feedback ? `<div class="pm-forge-nudge" role="status">${escapeHtml(_feedback)}</div>` : ''}
+          ${_feedback ? `<div class="pokenav-feedback is-nudge pm-forge-nudge" role="status">${escapeHtml(_feedback)}</div>` : ''}
         </section>
       </div>
       ${renderEvolutionOverlay()}
@@ -1018,6 +1071,7 @@ function render() {
       animate: true
     }));
   }
+  restoreFocus(focusSelector);
 }
 
 function resetTrial() {
@@ -1042,7 +1096,7 @@ function handleContainerClick(event) {
 
   if (action === 'pick-branch') {
     _selectedBranchId = btn.dataset.species;
-    audio?.playClick?.('switch');
+    audio?.playClick?.('select');
     render();
     return;
   }
