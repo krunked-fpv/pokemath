@@ -323,3 +323,18 @@ All module exports, schemas, constants, and CSS tokens below are **frozen contra
 - `context` provided by `main.js`:
   `{ state, mathEngine, hintEngine, adaptive, audio, vfx, rotomPane, shell, pokemonData, routesData, itemsData, onNavigate, modeParams }`
   where `onNavigate(modeId, params)` transitions cleanly among `'battle'`, `'catch'`, `'berry-lab'`, `'evolution-forge'`, `'gym'`, and `'camp'`.
+
+
+---
+
+## 7. Sprint 2 Polish Contracts (FROZEN)
+
+All Sprint 1 contracts above remain in force. Sprint 2 adds:
+
+1. **Rotom Metrics Contract** - `rotomPane.updateMetrics({ streak, chargePct, criticalReady, shinyBonusPct, totalSolved })`. When `chargePct` / `shinyBonusPct` are omitted they are derived from `streak`.
+2. **VFX Floating Text Contract** - `vfx.spawnFloatingText(stageEl, text, variant)` guarantees styled variants: `'damage' | 'crit' | 'xp' | 'coins' | 'coin' | 'heal' | 'nice' | 'info' | 'nudge' | 'success' | 'love'`.
+3. **Audio Click Variants** - `audio.playClick(variant)` adds `'select'` and `'love'` alongside existing variants.
+4. **Unified Speed Blitz Context** - `context.speedBlitz = { isEnabled(), isBonusActive(), consumeBonus(), resetForProblem() }`, owned by `main.js`. Individual modes MUST NOT render duplicate timers.
+5. **Anti-Spoiler Manipulative Invariant** - Tier 2 manipulatives (`tenFrame`, `base10`, `berryArray`, `comparisonScale`, `partWhole`) MUST NEVER print the solved final answer in `.manip-readout` on initial open.
+6. **CSS Scoping Invariant** - Shared game UI primitives live in `css/components.css`. Any mode-injected `<style>` MUST use a unique mode prefix (`.pm-battle-*`, `.pm-catch-*`, `.pm-lab-*`, `.pm-forge-*`, `.pm-camp-*`) and remove its `<style>` tag in `unmount()`, yielding zero cross-module class collisions.
+7. **Auto Read-Aloud Contract** - When `profile.settings.speech === true`, mounting a new problem calls `audio.speakText(problem.spokenPrompt || problem.promptText, false)`.
