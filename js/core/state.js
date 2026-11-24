@@ -60,25 +60,37 @@ const DEFAULT_QUEST_TEMPLATES = [
   {
     templateId: 'solve-5',
     title: 'Solve 5 Math Challenges',
-    metric: 'totalSolved',
+    metric: 'solve_total',
     target: 5,
     rewardStardust: 15
   },
   {
     templateId: 'streak-3',
     title: 'Reach a 3-Answer Streak',
-    metric: 'sessionStreak',
+    metric: 'solve_streak',
     target: 3,
     rewardStardust: 20
   },
   {
     templateId: 'catch-1',
     title: 'Befriend 1 Wild Pokémon',
-    metric: 'catches',
+    metric: 'catch_pokemon',
     target: 1,
     rewardStardust: 25
   }
 ];
+
+// Legacy quest metric names -> canonical names used by items.js templates.
+const LEGACY_QUEST_METRICS = {
+  totalSolved: 'solve_total',
+  sessionStreak: 'solve_streak',
+  catches: 'catch_pokemon'
+};
+
+function normalizeQuestMetric(metric, fallback) {
+  if (typeof metric !== 'string' || !metric) return fallback;
+  return Object.hasOwn(LEGACY_QUEST_METRICS, metric) ? LEGACY_QUEST_METRICS[metric] : metric;
+}
 
 const QUEST_TEMPLATE_BY_ID = Object.fromEntries(
   DEFAULT_QUEST_TEMPLATES.map((q) => [q.templateId, q])
@@ -403,7 +415,7 @@ function normalizeQuests(raw) {
       title: typeof q.title === 'string' && q.title.trim()
         ? q.title.trim()
         : (template?.title ?? 'Complete Challenge'),
-      metric: typeof q.metric === 'string' && q.metric ? q.metric : (template?.metric ?? 'totalSolved'),
+      metric: normalizeQuestMetric(q.metric, template?.metric ?? 'solve_total'),
       target,
       progress: toFiniteInt(q.progress, 0, 0),
       rewardStardust: toFiniteInt(q.rewardStardust, template?.rewardStardust ?? 15, 0),
@@ -658,6 +670,35 @@ function decodeSettingsMask(mask) {
   return out;
 }
 
+// Pack the last ROLLING_PACK_LEN mastery booleans into one integer with a leading
+// sentinel 1-bit (oldest first): [] -> 1, [true,false] -> 0b110. Max 2047.
+const ROLLING_PACK_LEN = 10;
+
+function packRolling(rolling) {
+  if (!Array.isArray(rolling)) return 1;
+  let packed = 1;
+  for (const hit of rolling.slice(-ROLLING_PACK_LEN)) {
+    packed = (packed << 1) | (hit ? 1 : 0);
+  }
+  return packed;
+}
+
+function unpackRolling(packed) {
+  // Also accept a [len, bitmask] pair (bit 0 = most recent answer).
+  if (Array.isArray(packed)) {
+    const len = toFiniteInt(packed[0], 0, 0, ROLLING_PACK_LEN);
+    const mask = toFiniteInt(packed[1], 0, 0);
+    const out = [];
+    for (let i = len - 1; i >= 0; i -= 1) out.push(Boolean((mask >> i) & 1));
+    return out;
+  }
+  const value = toFiniteInt(packed, 1, 1, (1 << (ROLLING_PACK_LEN + 1)) - 1);
+  const len = 31 - Math.clz32(value);
+  const out = [];
+  for (let i = len - 1; i >= 0; i -= 1) out.push(Boolean((value >> i) & 1));
+  return out;
+}
+
 function arraysEqual(a, b) {
   if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
@@ -791,7 +832,10 @@ function encodeProfileCompact(profile, options = {}) {
       for (const tag of tags) {
         const m = profile.skillMastery[tag];
         if (!m) continue;
-        sm[tag] = [m.attempts || 0, m.correct || 0, m.consecutiveMisses || 0, m.level ?? 1];
+        const row = [m.attempts || 0, m.correct || 0, m.consecutiveMisses || 0, m.level ?? 1];
+        const packed = packRolling(m.rolling);
+        if (packed > 1) row.push(packed);
+        sm[tag] = row;
       }
       compact.sm = sm;
     }
@@ -921,7 +965,7 @@ function decodeProfileCompact(c, fallbackTs) {
       skillMastery[tag] = {
         attempts: toFiniteInt(row[0], 0, 0),
         correct: toFiniteInt(row[1], 0, 0),
-        rolling: [],
+        rolling: unpackRolling(row[4]),
         consecutiveMisses: toFiniteInt(row[2], 0, 0),
         level: toFiniteInt(row[3], 1, 0, 10)
       };
@@ -941,7 +985,7 @@ function decodeProfileCompact(c, fallbackTs) {
           title: typeof q[2] === 'string' && q[2].trim()
             ? q[2].trim()
             : (tpl?.title ?? 'Complete Challenge'),
-          metric: typeof q[3] === 'string' && q[3] ? q[3] : (tpl?.metric ?? 'totalSolved'),
+          metric: normalizeQuestMetric(q[3], tpl?.metric ?? 'solve_total'),
           target: toFiniteInt(q[4], tpl?.target ?? 5, 1),
           progress: toFiniteInt(q[5], 0, 0),
           rewardStardust: toFiniteInt(q[6], tpl?.rewardStardust ?? 15, 0),
@@ -1275,7 +1319,7 @@ function notifySubscribers() {
   const active = getActiveProfile();
   for (const listener of [..._subscribers]) {
     try {
-      listener(snapshot, active ? deepClone(active) : null);
+      listener(snapshot, active);
     } catch {
       // Isolate subscriber errors so state persistence never aborts.
     }
@@ -1493,6 +1537,28 @@ export function updateProfile(mutatorFn) {
   persistBoth();
   notifySubscribers();
   return deepClone(normalized);
+}
+
+export const BUDDY_NICKNAME_MAX_LEN = 16;
+
+// Set (or clear with null/empty) the nickname of a caught Pok�mon on the active profile.
+// Returns the updated caught entry, or null when the profile/species is missing.
+export function setBuddyNickname(speciesId, nickname) {
+  ensureInitialized();
+  if (typeof speciesId !== 'string' || !speciesId || FORBIDDEN_KEYS.has(speciesId)) {
+    return null;
+  }
+  const clean = typeof nickname === 'string'
+    ? nickname.replace(/\s+/g, ' ').trim().slice(0, BUDDY_NICKNAME_MAX_LEN).trim()
+    : '';
+  let found = false;
+  const updated = updateProfile((draft) => {
+    if (!isPlainObject(draft.caught) || !isPlainObject(draft.caught[speciesId])) return draft;
+    found = true;
+    draft.caught[speciesId].nickname = clean || null;
+    return draft;
+  });
+  return found && updated ? updated.caught[speciesId] : null;
 }
 
 export function subscribe(listenerFn) {
