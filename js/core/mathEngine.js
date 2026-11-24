@@ -207,27 +207,192 @@ const STORY_THEMES = [
   { emoji: '💎', items: 'Gym Badges', place: 'Pebble Cavern' },
 ];
 
-function fractionWord(n, d) {
-  const names = {
-    2: 'halves',
-    3: 'thirds',
-    4: 'fourths',
-    5: 'fifths',
-    6: 'sixths',
-    8: 'eighths',
-  };
-  if (n === 1) {
-    const singular = {
-      2: 'half',
-      3: 'third',
-      4: 'fourth',
-      5: 'fifth',
-      6: 'sixth',
-      8: 'eighth',
-    };
-    return `1 ${singular[d] || `over ${d}`}`;
+/* ============================================================================
+ * Kid-Friendly Speech Helpers
+ * ============================================================================ */
+
+const ORDINAL_ONES = {
+  1: 'first',
+  2: 'second',
+  3: 'third',
+  4: 'fourth',
+  5: 'fifth',
+  6: 'sixth',
+  7: 'seventh',
+  8: 'eighth',
+  9: 'ninth',
+};
+
+const ORDINAL_TEENS = {
+  10: 'tenth',
+  11: 'eleventh',
+  12: 'twelfth',
+  13: 'thirteenth',
+  14: 'fourteenth',
+  15: 'fifteenth',
+  16: 'sixteenth',
+  17: 'seventeenth',
+  18: 'eighteenth',
+  19: 'nineteenth',
+};
+
+const TENS_WORDS = { 2: 'twenty', 3: 'thirty', 4: 'forty', 5: 'fifty', 6: 'sixty', 7: 'seventy', 8: 'eighty', 9: 'ninety' };
+const TENS_ORDINALS = {
+  2: 'twentieth',
+  3: 'thirtieth',
+  4: 'fortieth',
+  5: 'fiftieth',
+  6: 'sixtieth',
+  7: 'seventieth',
+  8: 'eightieth',
+  9: 'ninetieth',
+};
+
+/**
+ * Singular denominator word: 3 -> 'third', 21 -> 'twenty-first', 2 -> 'half'.
+ * Safe for every denominator 2..99 (falls back to "part of N" beyond that).
+ */
+function denominatorSingular(d) {
+  const den = Math.round(Number(d));
+  if (den === 2) return 'half';
+  if (ORDINAL_ONES[den] && den > 2) return ORDINAL_ONES[den];
+  if (ORDINAL_TEENS[den]) return ORDINAL_TEENS[den];
+  if (den >= 20 && den < 100) {
+    const t = Math.floor(den / 10);
+    const o = den % 10;
+    return o === 0 ? TENS_ORDINALS[t] : `${TENS_WORDS[t]}-${ORDINAL_ONES[o]}`;
   }
-  return `${n} ${names[d] || `over ${d}`}`;
+  return null;
+}
+
+function denominatorPlural(d) {
+  const den = Math.round(Number(d));
+  if (den === 2) return 'halves';
+  const single = denominatorSingular(den);
+  return single ? `${single}s` : null;
+}
+
+/** '1 half', '3 fourths', '5 twenty-firsts' — never 'fourthsths' or 'over N'. */
+function fractionWord(n, d) {
+  const num = Math.round(Number(n));
+  const word = num === 1 ? denominatorSingular(d) : denominatorPlural(d);
+  return word ? `${num} ${word}` : `${num} parts out of ${d}`;
+}
+
+function pluralize(count, singular, plural = `${singular}s`) {
+  return `${count} ${Number(count) === 1 ? singular : plural}`;
+}
+
+/**
+ * Converts a math expression into natural read-aloud phrasing.
+ * Every operator is replaced (replaceAll), and parenthesized groups read as
+ * "the group a plus b," so the parentheses are heard, not dropped.
+ */
+function speakMath(expr) {
+  let text = String(expr ?? '');
+  text = text
+    .replaceAll('×', ' times ')
+    .replaceAll('÷', ' divided by ')
+    .replaceAll('+', ' plus ')
+    .replaceAll(' - ', ' minus ')
+    .replaceAll('=', ' equals ')
+    .replaceAll('?', ' what number ');
+  text = text
+    .replace(/\(\s*/g, 'the group ')
+    .replace(/\s*\)\s*$/g, '')
+    .replace(/\s*\)\s*/g, ', ');
+  return text.replace(/\s{2,}/g, ' ').replace(/\s+,/g, ',').trim();
+}
+
+/* ============================================================================
+ * Skill Tag Labels (warm, kid-facing)
+ * ============================================================================ */
+
+const SKILL_TAG_LABELS = {
+  general: 'Math Adventure',
+  make_ten: 'Make a Ten',
+  number_bonds_20: 'Number Bonds to 20',
+  missing_addend: 'Missing Number Hunt',
+  add_within_10: 'Addition to 10',
+  add_within_20: 'Addition to 20',
+  add_within_100: 'Addition to 100',
+  add_3digit: 'Big Number Addition',
+  add_multidigit: 'Mega Addition',
+  sub_missing_20: 'Subtraction Mystery to 20',
+  sub_missing: 'Subtraction Mystery',
+  sub_within_10: 'Subtraction to 10',
+  sub_within_20: 'Subtraction to 20',
+  sub_within_100: 'Subtraction to 100',
+  sub_3digit: 'Big Number Subtraction',
+  sub_multidigit: 'Mega Subtraction',
+  arrays_5x5: 'Berry Arrays',
+  mul_tables_12: 'Times Tables',
+  mul_missing_factor: 'Missing Factor Hunt',
+  mul_multidigit: 'Mega Multiplication',
+  fact_families_div: 'Fact Families',
+  div_exact_12: 'Fair Sharing Division',
+  div_quotient_multidigit: 'Mega Division',
+  place_value_ones: 'Counting Ones',
+  place_value_tens_ones: 'Tens & Ones',
+  place_value_1000: 'Place Value to 1,000',
+  comparison_numbers: 'Compare Numbers',
+  comparison_100: 'Compare to 100',
+  comparison_1000: 'Compare to 1,000',
+  comparison_expressions: 'Compare Expressions',
+  comparison_champion: 'Champion Compare',
+  equivalent_fractions: 'Matching Fractions',
+  unit_fractions: 'Unit Fractions',
+  visual_fractions: 'Picture Fractions',
+  order_of_operations: 'Order of Operations',
+  balanced_equations: 'Balance the Scale',
+  word_1step_add: 'Adding Stories',
+  word_1step_sub: 'Take-Away Stories',
+  word_1step_100: 'Story Problems to 100',
+  coin_counting: 'Poké-Coin Counting',
+  word_equal_groups: 'Equal Groups Stories',
+  word_equal_sharing: 'Sharing Stories',
+  word_2step_champion: 'Champion Story',
+};
+
+const SKILL_WORD_LABELS = {
+  add: 'Addition',
+  sub: 'Subtraction',
+  mul: 'Multiplication',
+  div: 'Division',
+  word: 'Story',
+  pv: 'Place Value',
+  cmp: 'Compare',
+  frac: 'Fractions',
+};
+
+/**
+ * Turns an internal skillTag into a warm kid-friendly label.
+ * add_within_20 -> 'Addition to 20', word_2step_champion -> 'Champion Story'.
+ * Never throws; unknown tags are humanized instead of shown raw.
+ */
+export function formatSkillTag(skillTag) {
+  if (typeof skillTag !== 'string' || !skillTag.trim()) return 'Math Adventure';
+  const tag = skillTag.trim();
+  if (SKILL_TAG_LABELS[tag]) return SKILL_TAG_LABELS[tag];
+
+  const skip = tag.match(/^skip_counting_(\d+)s$/);
+  if (skip) return `Skip Counting by ${skip[1]}s`;
+
+  const words = tag.split(/[_\s-]+/).filter(Boolean);
+  const out = [];
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i].toLowerCase();
+    if (w === 'within' && words[i + 1]) {
+      out.push('to');
+      continue;
+    }
+    if (SKILL_WORD_LABELS[w]) {
+      out.push(SKILL_WORD_LABELS[w]);
+      continue;
+    }
+    out.push(/^\d/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1));
+  }
+  return out.join(' ') || 'Math Adventure';
 }
 
 /* ============================================================================
@@ -723,16 +888,18 @@ function genPlaceValue(ctx) {
     const mode = pick(['compose', 'tensDigit', 'onesDigit']);
 
     if (mode === 'compose') {
+      const tensText = pluralize(tens, 'ten');
+      const onesText = pluralize(ones, 'one');
       return makeProblemSpec({
         key: `pv-comp2:${tens}t+${ones}o`,
         tier,
         skillTag: 'place_value_tens_ones',
         operation: 'placeValue',
         format: 'placeValue',
-        promptText: `What number has ${tens} tens and ${ones} ones?`,
-        spokenPrompt: `What number has ${tens} tens and ${ones} ones?`,
-        expression: `${tens} tens + ${ones} ones = ?`,
-        leftExpr: `${tens} tens + ${ones} ones`,
+        promptText: `What number has ${tensText} and ${onesText}?`,
+        spokenPrompt: `What number has ${tensText} and ${onesText}?`,
+        expression: `${tensText} + ${onesText} = ?`,
+        leftExpr: `${tensText} + ${onesText}`,
         rightExpr: null,
         answer: num,
         choices: buildNumericChoices(num, [ones * 10 + tens, num + 10, num - 10, tens + ones]),
@@ -803,15 +970,18 @@ function genPlaceValue(ctx) {
 
   if (variant === 'tensValue' && tens > 0) {
     const val = tens * 10;
+    // Disambiguate when the same digit appears in another place (e.g. 334)
+    const digitRepeats = hundreds === tens || ones === tens;
+    const which = digitRepeats ? `the ${tens} in the tens place of ${num}` : `the ${tens} in ${num}`;
     return makeProblemSpec({
       key: `pv-val3:${num}`,
       tier,
       skillTag: 'place_value_1000',
       operation: 'placeValue',
       format: 'placeValue',
-      promptText: `What is the value of the ${tens} in ${num}?`,
-      spokenPrompt: `What is the value of the ${tens} in ${num}?`,
-      expression: `Value of ${tens} in ${num} = ?`,
+      promptText: `What is the value of ${which}?`,
+      spokenPrompt: `What is the value of ${which}?`,
+      expression: `Value of ${tens} (tens place) in ${num} = ?`,
       leftExpr: `${num}`,
       rightExpr: null,
       answer: val,
@@ -929,7 +1099,7 @@ function genComparison(ctx) {
     operation: 'comparison',
     format: 'comparison',
     promptText: `Compare the two sides: ${leftExpr}  [?]  ${rightExpr}`,
-    spokenPrompt: `Compare ${leftExpr.replace('×', 'times')} and ${rightExpr.replace('×', 'times')}. Choose less than, equal to, or greater than.`,
+    spokenPrompt: `Compare ${speakMath(leftExpr)}${leftExpr.includes('(') ? ',' : ''} with ${speakMath(rightExpr)}. Choose less than, equal to, or greater than.`,
     expression: `${leftExpr} ? ${rightExpr}`,
     leftExpr,
     rightExpr,
@@ -977,7 +1147,7 @@ function genFraction(ctx) {
       operation: 'fraction',
       format: 'missing',
       promptText: `Find the missing numerator for an equivalent fraction: ${leftNum}/${leftDen} = ?/${rightDen}`,
-      spokenPrompt: `Find the missing numerator: ${fractionWord(leftNum, leftDen)} equals how many ${fractionWord(2, rightDen).split(' ')[1] || rightDen}ths?`,
+      spokenPrompt: `Find the missing numerator: ${fractionWord(leftNum, leftDen)} equals how many ${denominatorPlural(rightDen) || `parts out of ${rightDen}`}?`,
       expression: `${leftNum}/${leftDen} = ?/${rightDen}`,
       leftExpr: `${leftNum}/${leftDen}`,
       rightExpr: `?/${rightDen}`,
@@ -997,7 +1167,8 @@ function genFraction(ctx) {
           rightNum: null,
           rightDen,
           multiplier,
-          shaded: ans,
+          // Anti-Spoiler: only the known base fraction is pre-shaded, never the unknown numerator
+          shaded: leftNum,
           total: rightDen,
         },
       },
@@ -1114,7 +1285,7 @@ function genOrderOfOps(ctx) {
     operation: 'orderOfOps',
     format: 'numeric',
     promptText: `Evaluate using order of operations: ${expr} = ?`,
-    spokenPrompt: `Evaluate: ${expr.replace('×', 'times').replace('÷', 'divided by').replace('-', 'minus').replace('+', 'plus')}`,
+    spokenPrompt: `Evaluate: ${speakMath(expr)}. Remember, solve the group in parentheses first!`,
     expression: `${expr} = ?`,
     leftExpr: expr,
     rightExpr: null,
@@ -1255,7 +1426,7 @@ function genWord(ctx) {
         manipulativeType: 'partWhole',
         operands: [a, b],
         targetRange: [0, a],
-        meta: { storyEmoji: theme.emoji, storyItems: theme.items, whole: a, parts: [b, ans] },
+        meta: { storyEmoji: theme.emoji, storyItems: theme.items, whole: a, parts: [b, null], partUnknown: 'right' },
       });
     }
   }
@@ -1270,9 +1441,11 @@ function genWord(ctx) {
       const remAfterD = remAfterQ - dimes * 10;
       const fives = remAfterD >= 5 ? randInt(0, Math.min(2, Math.floor(remAfterD / 5))) : 0;
       const ans = quarters * 25 + dimes * 10 + fives * 5;
-      const coinText = fives > 0
-        ? `${quarters} 25-Coin tokens, ${dimes} 10-Coin tokens, and ${fives} 5-Coin tokens`
-        : `${quarters} 25-Coin tokens and ${dimes} 10-Coin tokens`;
+      const coinParts = [pluralize(quarters, '25-Coin token'), pluralize(dimes, '10-Coin token')];
+      if (fives > 0) coinParts.push(pluralize(fives, '5-Coin token'));
+      const coinText = coinParts.length === 3
+        ? `${coinParts[0]}, ${coinParts[1]}, and ${coinParts[2]}`
+        : `${coinParts[0]} and ${coinParts[1]}`;
 
       return makeProblemSpec({
         key: `word-coins:${quarters}q-${dimes}d-${fives}n`,
@@ -1318,7 +1491,13 @@ function genWord(ctx) {
       manipulativeType: 'base10',
       operands: [a, b],
       targetRange: [0, maxN],
-      meta: { storyEmoji: theme.emoji, storyItems: theme.items, whole: useAdd ? ans : a, parts: useAdd ? [a, b] : [b, ans] },
+      meta: {
+        storyEmoji: theme.emoji,
+        storyItems: theme.items,
+        whole: useAdd ? ans : a,
+        parts: useAdd ? [a, b] : [b, null],
+        partUnknown: useAdd ? null : 'right',
+      },
     });
   }
 
@@ -1353,49 +1532,188 @@ function genWord(ctx) {
     });
   }
 
-  // Champion: 2-step word problems!
-  const boxes = randInt(2, Math.min(8, Math.max(2, Math.floor(cap / 6))));
-  const perBox = randInt(3, Math.min(12, Math.max(3, Math.floor(cap / (boxes + 1)))));
-  const subTotal = boxes * perBox;
-  const useSubtractStep = subTotal >= 10 && Math.random() < 0.5;
-  const extra = useSubtractStep
-    ? randInt(2, Math.max(2, Math.min(15, subTotal - 1)))
-    : randInt(2, Math.max(2, Math.min(18, Math.max(2, cap - subTotal))));
+  // Champion: 2-step word problems across 6 varied Pokémon story templates
+  return genChampionWord(ctx);
+}
 
-  const ans = useSubtractStep ? subTotal - extra : subTotal + extra;
-  return makeProblemSpec({
-    key: `word-champ:${boxes}x${perBox}${useSubtractStep ? '-' : '+'}${extra}`,
+/**
+ * Champion 2-step story templates. Each returns a ProblemSpec with
+ * meta.orderSteps = { step1Expr, step1Val, step2Op, step1Label, step2Label }.
+ * step2Op starting with an operator ('+ 5', '- 3', '÷ 4') continues from step1Val;
+ * otherwise it is a full expression (e.g. '100 - 36' for making change).
+ */
+const CHAMPION_WORD_TEMPLATES = ['martChange', 'gymRelay', 'berryHarvest', 'stadiumTrek', 'crateShip', 'stardustForge'];
+
+function genChampionWord(ctx) {
+  const { tier, cap } = ctx;
+  const small = cap < 60;
+  const template = pick(CHAMPION_WORD_TEMPLATES);
+  const base = {
     tier,
     skillTag: 'word_2step_champion',
     operation: 'word',
     format: 'word',
-    promptText: useSubtractStep
-      ? `Champion Cynthia packs ${boxes} cases of ${perBox} ${theme.items}, then trades away ${extra}. How many ${theme.items} remain?`
-      : `Champion Leon packs ${boxes} cases of ${perBox} ${theme.items} and finds ${extra} more on Victory Summit. How many ${theme.items} in total?`,
-    spokenPrompt: useSubtractStep
-      ? `Champion Cynthia packs ${boxes} cases of ${perBox} ${theme.items}, then trades away ${extra}. How many ${theme.items} remain?`
-      : `Champion Leon packs ${boxes} cases of ${perBox} ${theme.items} and finds ${extra} more on Victory Summit. How many ${theme.items} in total?`,
-    expression: `(${boxes} × ${perBox}) ${useSubtractStep ? '-' : '+'} ${extra} = ?`,
-    leftExpr: `(${boxes} × ${perBox}) ${useSubtractStep ? '-' : '+'} ${extra}`,
     rightExpr: null,
-    answer: ans,
-    choices: buildNumericChoices(ans, [subTotal, boxes + perBox + extra, ans + 5, useSubtractStep ? subTotal + extra : subTotal - extra]),
     manipulativeType: 'partWhole',
-    operands: [boxes, perBox, extra],
-    targetRange: [0, Math.max(cap, ans + 10)],
-    meta: {
-      storyEmoji: theme.emoji,
-      storyItems: theme.items,
-      rows: boxes,
-      cols: perBox,
-      whole: ans,
-      parts: [subTotal, extra],
-      orderSteps: {
-        step1Expr: `${boxes} × ${perBox}`,
-        step1Val: subTotal,
-        step2Op: `${useSubtractStep ? '-' : '+'} ${extra}`,
+  };
+
+  const finish = ({ key, text, expr, ans, distractors, operands, steps, meta }) =>
+    makeProblemSpec({
+      ...base,
+      key: `word-champ:${template}:${key}`,
+      promptText: text,
+      spokenPrompt: text,
+      expression: `${expr} = ?`,
+      leftExpr: expr,
+      answer: ans,
+      choices: buildNumericChoices(ans, distractors),
+      operands,
+      targetRange: [0, Math.max(cap, ans + 10)],
+      meta: { ...meta, orderSteps: steps, championTemplate: template },
+    });
+
+  if (template === 'martChange') {
+    const bundles = randInt(2, small ? 3 : 6);
+    const price = randInt(3, small ? 6 : 15);
+    const cost = bundles * price;
+    const paid = [20, 50, 100, 200].find((v) => v > cost) || Math.ceil((cost + 1) / 100) * 100;
+    const ans = paid - cost;
+    return finish({
+      key: `${bundles}x${price}:${paid}`,
+      text: `At the Poké-Mart, Trainer Dawn buys ${bundles} Poké Ball bundles that cost ${price} Poké-Coins each. She pays with ${paid} Poké-Coins. How many Poké-Coins does she get back in change?`,
+      expr: `${paid} - (${bundles} × ${price})`,
+      ans,
+      distractors: [cost, paid - price, ans + 10, ans + bundles],
+      operands: [bundles, price, paid],
+      steps: {
+        step1Expr: `${bundles} × ${price}`,
+        step1Val: cost,
+        step2Op: `${paid} - ${cost}`,
+        step1Label: 'Find the total cost of the bundles',
+        step2Label: 'Take the cost away from the coins Dawn paid',
       },
+      meta: { storyEmoji: '🛒', storyItems: 'Poké-Coins', rows: bundles, cols: price, whole: paid, parts: [cost, null], partUnknown: 'right' },
+    });
+  }
+
+  if (template === 'gymRelay') {
+    const teams = randInt(2, small ? 4 : 8);
+    const perTeam = randInt(3, small ? 4 : 6);
+    const joined = randInt(2, small ? 5 : 9);
+    const subTotal = teams * perTeam;
+    const ans = subTotal + joined;
+    return finish({
+      key: `${teams}x${perTeam}+${joined}`,
+      text: `Gym Leader Brock forms ${teams} relay teams with ${perTeam} Pokémon on each team. Then ${joined} more Pokémon race in to join. How many Pokémon are in the Gym relay now?`,
+      expr: `(${teams} × ${perTeam}) + ${joined}`,
+      ans,
+      distractors: [subTotal, teams + perTeam + joined, subTotal - joined, ans + perTeam],
+      operands: [teams, perTeam, joined],
+      steps: {
+        step1Expr: `${teams} × ${perTeam}`,
+        step1Val: subTotal,
+        step2Op: `+ ${joined}`,
+        step1Label: 'Find how many Pokémon are on the relay teams',
+        step2Label: 'Add the Pokémon who raced in to join',
+      },
+      meta: { storyEmoji: '🏃', storyItems: 'Pokémon', rows: teams, cols: perTeam, whole: ans, parts: [subTotal, joined] },
+    });
+  }
+
+  if (template === 'berryHarvest') {
+    const berry = pick(['Oran Berries', 'Sitrus Berries', 'Pecha Berries']);
+    const rows = randInt(3, small ? 4 : 8);
+    const perRow = randInt(4, small ? 6 : 12);
+    const subTotal = rows * perRow;
+    const shared = randInt(2, Math.max(2, Math.min(20, subTotal - 2)));
+    const ans = subTotal - shared;
+    return finish({
+      key: `${rows}x${perRow}-${shared}:${berry}`,
+      text: `Bulbasaur harvests ${rows} rows of berry bushes with ${perRow} ${berry} in each row. It shares ${shared} ${berry} with a hungry Snorlax. How many ${berry} are left?`,
+      expr: `(${rows} × ${perRow}) - ${shared}`,
+      ans,
+      distractors: [subTotal, subTotal + shared, ans + 10, rows + perRow],
+      operands: [rows, perRow, shared],
+      steps: {
+        step1Expr: `${rows} × ${perRow}`,
+        step1Val: subTotal,
+        step2Op: `- ${shared}`,
+        step1Label: 'Find how many berries were harvested',
+        step2Label: 'Take away the berries shared with Snorlax',
+      },
+      meta: { storyEmoji: '🍓', storyItems: berry, rows, cols: perRow, whole: subTotal, parts: [shared, null], partUnknown: 'right' },
+    });
+  }
+
+  if (template === 'stadiumTrek') {
+    const legs = randInt(2, small ? 3 : 5);
+    const meters = randInt(small ? 5 : 12, small ? 12 : 45);
+    const sprint = randInt(5, small ? 10 : 30);
+    const subTotal = legs * meters;
+    const ans = subTotal + sprint;
+    return finish({
+      key: `${legs}x${meters}+${sprint}`,
+      text: `On the trek to Indigo Stadium, Gible hikes ${legs} trail legs that are ${meters} meters each, then sprints ${sprint} more meters to the Stadium gate. How many meters does Gible travel in all?`,
+      expr: `(${legs} × ${meters}) + ${sprint}`,
+      ans,
+      distractors: [subTotal, legs + meters + sprint, ans + 10, ans - legs],
+      operands: [legs, meters, sprint],
+      steps: {
+        step1Expr: `${legs} × ${meters}`,
+        step1Val: subTotal,
+        step2Op: `+ ${sprint}`,
+        step1Label: 'Find the distance of all the trail legs',
+        step2Label: 'Add the final sprint',
+      },
+      meta: { storyEmoji: '🏟️', storyItems: 'meters', rows: legs, cols: meters, whole: ans, parts: [subTotal, sprint] },
+    });
+  }
+
+  if (template === 'crateShip') {
+    const perCrate = randInt(4, small ? 5 : 10);
+    const crates = randInt(3, small ? 5 : 9);
+    const total = perCrate * crates;
+    const shipped = randInt(1, crates - 1);
+    const ans = crates - shipped;
+    return finish({
+      key: `${total}/${perCrate}-${shipped}`,
+      text: `Nurse Joy packs ${total} Poké Balls into crates that hold ${perCrate} Poké Balls each. Then she ships ${pluralize(shipped, 'crate')} to Pewter City. How many full crates are still at the Pokémon Center?`,
+      expr: `(${total} ÷ ${perCrate}) - ${shipped}`,
+      ans,
+      distractors: [crates, crates + shipped, ans + 1, ans + 2],
+      operands: [total, perCrate, shipped],
+      steps: {
+        step1Expr: `${total} ÷ ${perCrate}`,
+        step1Val: crates,
+        step2Op: `- ${shipped}`,
+        step1Label: 'Find how many crates Nurse Joy packs',
+        step2Label: 'Take away the crates that were shipped',
+      },
+      meta: { storyEmoji: '📦', storyItems: 'crates', whole: crates, parts: [shipped, null], partUnknown: 'right' },
+    });
+  }
+
+  // stardustForge: (a + b) ÷ jars
+  const jars = randInt(2, small ? 3 : 6);
+  const perJar = randInt(3, small ? 6 : 15);
+  const total = jars * perJar;
+  const fromClefairy = randInt(2, Math.max(2, total - 2));
+  const fromJigglypuff = total - fromClefairy;
+  return finish({
+    key: `${fromClefairy}+${fromJigglypuff}/${jars}`,
+    text: `At the Evolution Forge, Clefairy brings ${fromClefairy} Stardust and Jigglypuff brings ${fromJigglypuff} Stardust. They mix it all together and pour it equally into ${jars} jars. How much Stardust goes in each jar?`,
+    expr: `(${fromClefairy} + ${fromJigglypuff}) ÷ ${jars}`,
+    ans: perJar,
+    distractors: [perJar + 1, perJar - 1, jars, perJar + jars],
+    operands: [fromClefairy, fromJigglypuff, jars],
+    steps: {
+      step1Expr: `${fromClefairy} + ${fromJigglypuff}`,
+      step1Val: total,
+      step2Op: `÷ ${jars}`,
+      step1Label: 'Mix all the Stardust together',
+      step2Label: 'Share the Stardust equally into the jars',
     },
+    meta: { storyEmoji: '✨', storyItems: 'Stardust', whole: total, parts: [fromClefairy, fromJigglypuff] },
   });
 }
 

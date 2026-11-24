@@ -17,6 +17,23 @@ function safeNum(val, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+/** Read-aloud phrasing for math expressions (operators + parentheses spoken naturally). */
+function speakMath(expr) {
+  let text = String(expr ?? '');
+  text = text
+    .replaceAll('×', ' times ')
+    .replaceAll('÷', ' divided by ')
+    .replaceAll('+', ' plus ')
+    .replaceAll(' - ', ' minus ')
+    .replaceAll('=', ' equals ')
+    .replaceAll('?', ' what number ');
+  text = text
+    .replace(/\(\s*/g, 'the group ')
+    .replace(/\s*\)\s*$/g, '')
+    .replace(/\s*\)\s*/g, ', ');
+  return text.replace(/\s{2,}/g, ' ').replace(/\s+,/g, ',').trim();
+}
+
 function resolveManipulativeType(problem) {
   if (problem && VALID_MANIPULATIVES.has(problem.manipulativeType)) {
     return problem.manipulativeType;
@@ -133,10 +150,25 @@ function buildManipulativeConfig(type, problem) {
       const fd = meta.fractionData;
       const cols = Math.max(1, safeNum(meta.cols, safeNum(fd.rightDen || fd.denominator, 4)));
       const rows = Math.max(1, safeNum(meta.rows, safeNum(fd.multiplier, 1)));
+      const isEquiv = Boolean(fd.multiplier);
+      if (isEquiv) {
+        // Anti-Spoiler: pre-shade ONLY the known base fraction (leftNum parts of the
+        // first row), never the unknown equivalent numerator.
+        const baseShaded = Math.max(0, Math.min(cols, safeNum(fd.leftNum, 0)));
+        return {
+          rows,
+          cols,
+          mode: 'equivFraction',
+          shaded: baseShaded,
+          baseNum: baseShaded,
+          baseDen: Math.max(1, safeNum(fd.leftDen, cols)),
+          total: Math.max(1, safeNum(fd.total, rows * cols)),
+        };
+      }
       return {
         rows,
         cols,
-        mode: fd.multiplier ? 'equivFraction' : 'fraction',
+        mode: 'fraction',
         shaded: Math.max(0, safeNum(fd.shaded, safeNum(fd.numerator, 1))),
         total: Math.max(1, safeNum(fd.total, rows * cols)),
       };
@@ -146,7 +178,7 @@ function buildManipulativeConfig(type, problem) {
     return {
       rows,
       cols,
-      mode: op === 'div' ? 'div' : 'mul',
+      mode: op === 'div' || String(problem?.expression || '').includes('÷') ? 'div' : 'mul',
     };
   }
 
@@ -179,6 +211,15 @@ function buildManipulativeConfig(type, problem) {
       right = null;
     }
   } else if (op === 'sub' && whole !== null) {
+    unknown = 'right';
+    left = safeNum(ops[1], left);
+    right = null;
+  } else if (meta.partUnknown === 'right' && whole !== null) {
+    // Take-away stories: whole and removed part known, remaining part unknown
+    unknown = 'right';
+    right = null;
+  } else if (op === 'div' && whole !== null) {
+    // Sharing: dividend (whole) and divisor known, quotient stays hidden
     unknown = 'right';
     left = safeNum(ops[1], left);
     right = null;
@@ -394,6 +435,34 @@ function buildSubHints(problem) {
           label: 'Step 2',
           highlight: `Now subtract the remaining ${ones}`,
           formula: `${mid} - ${ones} = ?`,
+        },
+      ],
+    };
+  }
+
+  // Bridge Back to 10: crossing a ten boundary (14 - 6 -> 14 - 4 = 10, then 10 - 2 = ?)
+  const onesOfA = a % 10;
+  if (a > 10 && b > onesOfA && b < 10 && onesOfA > 0 && b <= a) {
+    const base = a - onesOfA;
+    const rest = b - onesOfA;
+    const headline = base === 10 ? 'Bridge Back to 10!' : `Bridge Back to ${base}!`;
+    return {
+      tier1: {
+        headline,
+        nudgeText: `Split ${b} into ${onesOfA} and ${rest}. Take away ${onesOfA} first to land exactly on ${base}, then take away the other ${rest}.`,
+        spokenText: `Split ${b} into ${onesOfA} and ${rest}. Take away ${onesOfA} to land on ${base}, then take away ${rest} more.`,
+      },
+      tier2Prompt: `Hop back ${onesOfA} to reach ${base} first, then hop back ${rest} more.`,
+      steps: [
+        {
+          label: 'Step 1',
+          highlight: `Take away ${onesOfA} to bridge back to ${base}`,
+          formula: `${a} - ${onesOfA} = ${base}`,
+        },
+        {
+          label: 'Step 2',
+          highlight: `Now take away the leftover ${rest}`,
+          formula: `${base} - ${rest} = ?`,
         },
       ],
     };
@@ -628,6 +697,32 @@ function buildPlaceValueHints(problem) {
     };
   }
 
+  if (askPlace === 'value') {
+    // "What is the value of the 4 in 345?" -> find the tens digit, then scale by 10
+    return {
+      tier1: {
+        headline: 'Digit Times Its Place!',
+        nudgeText: `Find which column the ${tens} sits in for ${num}. A digit in the tens place is worth that many tens.`,
+        spokenText: `Find the column the ${tens} sits in. A digit in the tens place is worth that many tens.`,
+      },
+      tier2Prompt: 'Count the Base-10 rods: each rod is worth 10.',
+      steps: [
+        {
+          label: 'Step 1',
+          highlight: `Spot the ${tens} in the tens column of ${num}`,
+          formula: `Tens digit: ${tens}`,
+        },
+        {
+          label: 'Step 2',
+          highlight: `${tens} tens means ${tens} rods of 10`,
+          formula: `${tens} × 10 = ?`,
+        },
+      ],
+    };
+  }
+
+  const placeName = ['hundreds', 'tens', 'ones'].includes(askPlace) ? askPlace : 'requested';
+  const placeTitle = placeName.charAt(0).toUpperCase() + placeName.slice(1);
   return {
     tier1: {
       headline: 'Check the Place Column!',
@@ -643,8 +738,8 @@ function buildPlaceValueHints(problem) {
       },
       {
         label: 'Step 2',
-        highlight: `Focus on the requested ${askPlace} value`,
-        formula: `${askPlace} = ?`,
+        highlight: `Find the digit sitting in the ${placeName} place`,
+        formula: `${placeTitle} digit = ?`,
       },
     ],
   };
@@ -784,7 +879,7 @@ function buildBalancedHints(problem) {
     tier1: {
       headline: 'Balance Both Pans!',
       nudgeText: `First find the total of the complete side (${rightExpr}), then match the left side to that exact value!`,
-      spokenText: `First calculate ${rightExpr}, then make the other side equal that same value.`,
+      spokenText: `First calculate ${speakMath(rightExpr)}, then make the other side equal that same value.`,
     },
     tier2Prompt: 'Use the Comparison Scale to balance both expressions.',
     steps: [
@@ -805,23 +900,28 @@ function buildBalancedHints(problem) {
 function buildWordHints(problem, config, type) {
   const os = problem.meta?.orderSteps;
   if (os && os.step1Expr) {
+    const step2Op = String(os.step2Op || '').trim();
+    const continues = /^[×+\-÷]/.test(step2Op);
+    const step2Formula = continues ? `${os.step1Val} ${step2Op} = ?` : `${step2Op || os.step1Val} = ?`;
+    const label1 = os.step1Label || 'Find the amount in the equal groups';
+    const label2 = os.step2Label || 'Now apply the second step of the story';
     return {
       tier1: {
         headline: 'Two-Step Adventure Plan!',
-        nudgeText: `First find the group total (${os.step1Expr}), then handle the second change (${os.step2Op}).`,
-        spokenText: `Break this story into two steps: first find ${os.step1Expr}, then apply the next step.`,
+        nudgeText: `Step 1: ${label1} (${os.step1Expr}). Step 2: ${label2.charAt(0).toLowerCase()}${label2.slice(1)}.`,
+        spokenText: `Break this story into two steps. First, find ${speakMath(os.step1Expr)}. Then, ${label2.charAt(0).toLowerCase()}${label2.slice(1)}.`,
       },
       tier2Prompt: 'Use the Part-Whole model to track Step 1 and Step 2.',
       steps: [
         {
           label: 'Step 1',
-          highlight: `Find the amount in the equal groups`,
+          highlight: label1,
           formula: `${os.step1Expr} = ${os.step1Val}`,
         },
         {
           label: 'Step 2',
-          highlight: 'Now apply the second step of the story',
-          formula: `${os.step1Val} ${os.step2Op} = ?`,
+          highlight: label2,
+          formula: step2Formula,
         },
       ],
     };
