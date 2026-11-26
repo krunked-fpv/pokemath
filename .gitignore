@@ -12,3 +12,5 @@ Thumbs.db
 scratch/
 tmp/
 .worktrees/
+*.md
+!README.md
