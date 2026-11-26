@@ -14,3 +14,4 @@ tmp/
 .worktrees/
 *.md
 !README.md
+dna/
